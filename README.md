@@ -26,6 +26,28 @@ cambia con `PUERTO_API`, `PUERTO_POSTGRES` y `PUERTO_REDIS`.
 en el primer despliegue por una diferencia de la emulación. Se habla con los de
 verdad, con las credenciales del `.env`.
 
+## Antes de abrir un PR
+
+```bash
+pnpm lint                    # Biome: formato y lint (pnpm exec biome check --write . arregla lo seguro)
+pnpm exec tsc --noEmit -p tsconfig.json && pnpm exec tsc --noEmit -p tsconfig.scripts.json
+pnpm build
+pnpm db:generar              # si tocaste src/db/esquema: no debe quedar nada sin subir
+pnpm probar:eventos          # y los probar:* de lo que hayas tocado
+```
+
+El CI (`.github/workflows/ci.yml`) corre lo mismo en cada PR hacia `main`,
+más dos cosas que en local se olvidan: que **el esquema y las migraciones
+cuadren** y que las migraciones **se apliquen sobre una base vacía**, dos veces.
+También construye la imagen, y al llegar a `main` la publica en GHCR.
+
+**Los `probar:*` no corren en CI**: hablan con S3 y Cognito de verdad, y eso
+serían credenciales de producción en un runner. Se corren a mano.
+
+**`useImportType` está apagada en Biome a propósito** (ver `biome.jsonc`): su
+arreglo automático convierte en `import type` las clases que Nest inyecta, y la
+API deja de arrancar.
+
 ## Traer los datos de DynamoDB
 
 ```bash
