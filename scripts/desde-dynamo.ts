@@ -384,6 +384,14 @@ async function principal() {
 
 		/* ─── Pedidos, sus partidas y su bitácora ──────────────────────────── */
 		for (const it of de("ORDER/META")) {
+			/* Los pedidos más viejos no traen `productosTotal`: son de antes de que
+			   ese campo existiera y sólo guardaban `total`. Se deduce sumando sus
+			   líneas, que es exactamente lo que significa — sin esto quedaban en
+			   cero y el pedido no cuadraba con sus propias partidas. Son tres. */
+			const sumaDeLineas = (it.lineas ?? []).reduce(
+				(n: number, l: Item) => n + Number(l.importe ?? 0),
+				0,
+			);
 			/* Un pedido SIN compra es de antes de que existieran las compras. No
 			   se puede insertar —la FK es obligatoria— así que se le fabrica una
 			   compra de una sola parte, que es exactamente lo que era. */
@@ -398,7 +406,7 @@ async function principal() {
 						nombre: opcional(it.comprador?.nombre),
 						whatsapp: opcional(it.comprador?.whatsapp),
 						piezas: Number(it.piezas ?? 0),
-						productosTotal: pesos(it.productosTotal),
+						productosTotal: pesos(it.productosTotal ?? sumaDeLineas),
 						total: pesos(it.total),
 						huellaDeToken: opcional(it.tokenHuella),
 						creadoEn: fecha(it.createdAt),
@@ -442,7 +450,7 @@ async function principal() {
 					direccion: it.entrega?.direccion ?? null,
 					envio: it.envio ?? null,
 					guia: it.guia ?? null,
-					productosTotal: pesos(it.productosTotal),
+					productosTotal: pesos(it.productosTotal ?? sumaDeLineas),
 					total: pesos(it.total),
 					huellaDeToken: opcional(it.tokenHuella),
 					creadoEn: fecha(it.createdAt),
@@ -451,6 +459,10 @@ async function principal() {
 				.onConflictDoNothing();
 			anotar("pedidos", 1);
 
+			/* Las partidas SÍ traen id del origen, así que bastaría
+			   `onConflictDoNothing`; se borran igual para que una línea quitada
+			   del pedido en el origen no sobreviva aquí. Sus tallas caen en
+			   cascada. */
 			await db
 				.delete(e.pedidoPartidas)
 				.where(eq(e.pedidoPartidas.pedidoId, it.id));
@@ -458,28 +470,53 @@ async function principal() {
 				.delete(e.pedidoBitacora)
 				.where(eq(e.pedidoBitacora.pedidoId, it.id));
 
-			for (const l of it.lineas ?? []) {
-				const piezas = Number(l.piezas ?? l.cantidad ?? 0);
-				const unitario = Number(l.precioUnitario ?? l.precio ?? 0);
+			for (const [orden, l] of (it.lineas ?? []).entries()) {
+				const tallas: { size: string; piezas: number }[] = (
+					Array.isArray(l.tallas) ? l.tallas : []
+				)
+					.map((t: Item) => ({
+						size: String(t.size ?? ""),
+						piezas: Number(t.piezas ?? 0),
+					}))
+					.filter((t: { size: string; piezas: number }) => t.size && t.piezas > 0);
 
-				await db
-					.insert(e.pedidoPartidas)
-					.values({
-						pedidoId: it.id,
-						productoId: opcional(l.productoId ?? l.productId),
-						nombre: l.nombre ?? l.name ?? "(sin nombre)",
-						color: opcional(l.color),
-						talla: opcional(l.talla ?? l.size),
-						piezas,
-						precioUnitario: pesos(unitario),
-						/* El importe se recalcula y no se copia: en DynamoDB no siempre
-						   estaba, y una partida sin importe deja el pedido sumando mal. */
-						importe: pesos(l.importe ?? piezas * unitario),
-						arte: l.arte ?? l.rutas ?? null,
-						diseno: l.diseno ?? null,
-					})
-					.onConflictDoNothing();
+				const piezas =
+					Number(l.piezas ?? 0) || tallas.reduce((n, t) => n + t.piezas, 0);
+				const importe = Number(l.importe ?? 0);
+
+				await db.insert(e.pedidoPartidas).values({
+					id: l.id,
+					pedidoId: it.id,
+					productoId: opcional(l.productoId),
+					nombre: l.producto ?? "(sin nombre)",
+					sku: opcional(l.sku),
+					imagenUrl: opcional(l.imagen),
+					plantillaId: opcional(l.templateId),
+					color: opcional(l.colorPrenda),
+					colorHex: opcional(l.colorPrendaHex),
+					lados: l.lados ?? [],
+					piezas,
+					/* El unitario NO está en el origen: allí sólo se guardaba el
+					   importe. Se deduce, que es exactamente como se calculó al
+					   cobrar (base + lados, por pieza). */
+					precioUnitario: pesos(piezas > 0 ? importe / piezas : 0),
+					importe: pesos(importe),
+					arte: l.arte ?? [],
+					disenoRuta: opcional(l.diseno),
+					bordados: l.bordados ?? null,
+					diasPrometidos: l.diasPrometidos ?? null,
+					faltantes: l.faltantes ?? [],
+					orden,
+				});
 				anotar("partidas", 1);
+
+				for (const t of tallas) {
+					await db
+						.insert(e.pedidoPartidaTallas)
+						.values({ partidaId: l.id, talla: t.size, piezas: t.piezas })
+						.onConflictDoNothing();
+					anotar("tallas", 1);
+				}
 			}
 
 			for (const b of it.bitacora ?? []) {

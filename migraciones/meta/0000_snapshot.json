@@ -1,5 +1,5 @@
 {
-  "id": "a8a0ea87-ec57-42e9-9da0-837f55f57093",
+  "id": "32e7b010-752d-4100-b5e0-69d16ff39b6d",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -2231,6 +2231,19 @@
           "primaryKey": false,
           "notNull": false
         },
+        "metodo_entrega": {
+          "name": "metodo_entrega",
+          "type": "metodo_entrega",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "direccion": {
+          "name": "direccion",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
         "creado_en": {
           "name": "creado_en",
           "type": "timestamp with time zone",
@@ -2522,6 +2535,80 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.pedido_partida_tallas": {
+      "name": "pedido_partida_tallas",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "partida_id": {
+          "name": "partida_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "talla": {
+          "name": "talla",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "piezas": {
+          "name": "piezas",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "pedido_partida_tallas_unico": {
+          "name": "pedido_partida_tallas_unico",
+          "columns": [
+            {
+              "expression": "partida_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "talla",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "pedido_partida_tallas_partida_id_pedido_partidas_id_fk": {
+          "name": "pedido_partida_tallas_partida_id_pedido_partidas_id_fk",
+          "tableFrom": "pedido_partida_tallas",
+          "tableTo": "pedido_partidas",
+          "columnsFrom": [
+            "partida_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.pedido_partidas": {
       "name": "pedido_partidas",
       "schema": "",
@@ -2551,17 +2638,42 @@
           "primaryKey": false,
           "notNull": true
         },
+        "sku": {
+          "name": "sku",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "imagen_url": {
+          "name": "imagen_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "plantilla_id": {
+          "name": "plantilla_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "color": {
           "name": "color",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "talla": {
-          "name": "talla",
+        "color_hex": {
+          "name": "color_hex",
           "type": "text",
           "primaryKey": false,
           "notNull": false
+        },
+        "lados": {
+          "name": "lados",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::jsonb"
         },
         "piezas": {
           "name": "piezas",
@@ -2585,13 +2697,40 @@
           "name": "arte",
           "type": "jsonb",
           "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::jsonb"
+        },
+        "diseno_ruta": {
+          "name": "diseno_ruta",
+          "type": "text",
+          "primaryKey": false,
           "notNull": false
         },
-        "diseno": {
-          "name": "diseno",
+        "bordados": {
+          "name": "bordados",
           "type": "jsonb",
           "primaryKey": false,
           "notNull": false
+        },
+        "dias_prometidos": {
+          "name": "dias_prometidos",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "faltantes": {
+          "name": "faltantes",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::jsonb"
+        },
+        "orden": {
+          "name": "orden",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
         }
       },
       "indexes": {
@@ -2600,6 +2739,12 @@
           "columns": [
             {
               "expression": "pedido_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "orden",
               "isExpression": false,
               "asc": true,
               "nulls": "last"

@@ -48,6 +48,16 @@ export const compras = pgTable(
 		 * respuesta y entonces leer un pedido bastaría para abrir el de al lado.
 		 */
 		huellaDeToken: text("huella_de_token"),
+		/**
+		 * Cómo se entrega TODA la compra, y sólo si sus partes coinciden.
+		 *
+		 * Con métodos distintos —uno se recoge y el otro se envía— no existe "la
+		 * entrega de la compra", y guardar la de una parte como si fuera la de
+		 * todas es la clase de dato que después se lee mal. Entonces queda nulo y
+		 * quien lo enseñe mira las partes.
+		 */
+		metodoEntrega: metodoEntrega("metodo_entrega"),
+		direccion: jsonb(),
 		...marcas,
 	},
 	(t) => [
@@ -127,13 +137,22 @@ export const pedidos = pgTable(
 );
 
 /**
- * Una partida del pedido: un producto, un color, una talla, unas piezas.
+ * Una partida del pedido: un producto, un color y los lados que se estampan.
+ *
+ * LAS TALLAS VAN APARTE, en `pedido_partida_tallas`. Una partida no es "una
+ * playera negra talla M": es "playera negra, frente y espalda, S×2 M×3". Así
+ * la ve quien compra, así se cobra —el precio es por pieza y los lados suman
+ * igual para todas las tallas— y así se sube el arte, que es uno por lado y no
+ * uno por talla.
  *
  * TODO LO QUE DECIDE EL PRECIO ESTÁ CONGELADO AQUÍ, no referenciado. El
  * producto puede subir de precio, cambiar de nombre o desaparecer del catálogo
- * mañana; lo que se cobró no cambia. `producto_id` queda como rastro para
- * "repetir pedido" y por eso es `set null`: borrar un producto no puede
- * borrar la historia de lo que alguien compró.
+ * mañana; lo que se cobró no cambia. El pedido es un documento de lo que se
+ * acordó, no una vista del catálogo de hoy.
+ *
+ * `producto_id` queda como rastro para "repetir pedido", y por eso es
+ * `set null`: borrar un producto no puede borrar la historia de lo que alguien
+ * compró.
  */
 export const pedidoPartidas = pgTable(
 	"pedido_partidas",
@@ -145,19 +164,88 @@ export const pedidoPartidas = pgTable(
 		productoId: uuid("producto_id").references(() => productos.id, {
 			onDelete: "set null",
 		}),
+		/** Congelado: el nombre que tenía el día que se compró. */
 		nombre: text().notNull(),
+		/** Para comprar el blanco hace falta el código del taller, no el nombre. */
+		sku: text(),
+		imagenUrl: text("imagen_url"),
+		plantillaId: text("plantilla_id"),
+		/**
+		 * El color de la prenda, con su referencia.
+		 *
+		 * El nombre solo no basta para comprar el blanco ni para decidir la
+		 * subbase: "Negro" no le dice a nadie qué tono. Se copia el hex.
+		 */
 		color: text(),
-		talla: text(),
+		colorHex: text("color_hex"),
+		/** Qué lados se estampan. Decide el recargo y cuántos archivos hay. */
+		lados: jsonb().notNull().default([]),
+		/** La suma de las piezas de todas sus tallas. */
 		piezas: integer().notNull(),
+		/** Base más lo que suman los lados. Por pieza. */
 		precioUnitario: numeric("precio_unitario", { precision: 10, scale: 2 })
 			.notNull(),
 		importe: numeric({ precision: 12, scale: 2 }).notNull(),
-		/** Las rutas del arte en S3, por lado. El archivo ya está subido. */
-		arte: jsonb(),
-		/** El lienzo con el que se generó, para poder reabrirlo en el editor. */
-		diseno: jsonb(),
+		/**
+		 * Dónde vive cada archivo de producción, por lado.
+		 *
+		 * SON RUTAS, NO ARCHIVOS, y se apuntan ANTES de que existan: el navegador
+		 * los sube enseguida con URLs firmadas. Las medidas del lado van aquí
+		 * dentro y también congeladas — viven en el producto y el taller puede
+		 * editarlas mañana, y un pedido de hace un mes no se imprime al tamaño de
+		 * hoy.
+		 */
+		arte: jsonb().notNull().default([]),
+		/**
+		 * El lienzo editable vive en S3; aquí sólo su ruta.
+		 *
+		 * Lleva dentro las imágenes que subió el cliente, así que no es un dato
+		 * de base de datos: en DynamoDB reventaba el ítem de 400 KB en cuanto
+		 * alguien arrastraba una foto de verdad. Aquí cabría, pero seguiría
+		 * siendo cargar megas en cada lectura del pedido.
+		 */
+		disenoRuta: text("diseno_ruta"),
+		/** Cómo quedó el bordado de cada lado que se borda, si hay alguno. */
+		bordados: jsonb(),
+		/**
+		 * Lo que se le PROMETIÓ al comprador, congelado como el precio.
+		 *
+		 * Si no había blancos se le dijeron más días, porque el taller tiene que
+		 * comprarlos. Ese compromiso es del momento de la compra: si mañana llega
+		 * mercancía el pedido no se vuelve más rápido, y si el taller cambia sus
+		 * días, un pedido de la semana pasada no se mueve.
+		 */
+		diasPrometidos: integer("dias_prometidos"),
+		/**
+		 * Lo que el taller tiene que COMPRAR para sacar esta partida.
+		 *
+		 * Se calcula al pedir y se guarda, porque el inventario ya habrá cambiado
+		 * cuando alguien mire la ficha.
+		 */
+		faltantes: jsonb().notNull().default([]),
+		orden: integer().notNull().default(0),
 	},
-	(t) => [index("pedido_partidas_pedido").on(t.pedidoId)],
+	(t) => [index("pedido_partidas_pedido").on(t.pedidoId, t.orden)],
+);
+
+/**
+ * Cuántas piezas de cada talla lleva una partida.
+ *
+ * Es la tabla contra la que se descuentan las existencias, y por eso es una
+ * tabla y no un JSONB: el descuento va por (producto, color, talla) y con un
+ * documento habría que abrirlo en memoria para saber qué tocar.
+ */
+export const pedidoPartidaTallas = pgTable(
+	"pedido_partida_tallas",
+	{
+		id: uuid().primaryKey().defaultRandom(),
+		partidaId: uuid("partida_id")
+			.notNull()
+			.references(() => pedidoPartidas.id, { onDelete: "cascade" }),
+		talla: text().notNull(),
+		piezas: integer().notNull(),
+	},
+	(t) => [uniqueIndex("pedido_partida_tallas_unico").on(t.partidaId, t.talla)],
 );
 
 /**

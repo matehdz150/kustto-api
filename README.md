@@ -87,12 +87,48 @@ candados de unicidad son índices.
 que se cambie de proveedor cambia una variable. Sin `SMTP_URL` no manda y lo
 dice en el log: un pedido cobrado no puede fallar porque el correo no salga.
 
+## Pedidos y compras
+
+**Una compra, y por dentro un pedido por taller.** No es un pedido con líneas
+de varios: el taller produce, cobra y envía lo suyo, y su estado es suyo. Con
+un pedido compartido, "en producción" dejaría de significar algo.
+
+El folio corto (#481902) es de la COMPRA; cada parte es `#481902-1`,
+`#481902-2`, así que el cliente dice un número y el taller reconoce el suyo
+dentro.
+
+**Del navegador no se acepta nada que decida cuánto se cobra.** El producto se
+lee de la base y de ahí salen el taller, el precio y las medidas; el precio del
+envío sale de la cotización guardada. Sólo se aceptan cantidades, lados
+elegidos, color y dos ids de cotización.
+
+**Todo lo que decide el precio se congela en la partida**, no se referencia. El
+producto puede subir de precio o desaparecer del catálogo mañana; el pedido es
+un documento de lo que se acordó.
+
+**Las existencias no bloquean la venta.** Se puede comprar sin blancos
+avisando de más días, porque el taller los compra; el stock puede quedar
+negativo y eso es información — un -2 le dice al taller que compre 2.
+
+**El token de seguimiento no se guarda, se guarda su huella**, y se compara en
+tiempo constante. Pedir no exige cuenta, así que `/pedido?id=…&token=…` es la
+única forma de que un invitado vea el suyo.
+
+Probar el ciclo entero —transiciones, cancelación, carrera entre dos personas
+del taller, aislamiento entre talleres— contra la base de `docker compose`:
+
+```bash
+pnpm probar:pedidos
+```
+
 ## Lo que todavía no está
 
-Portado: **el catálogo público** (`/publico/catalogo`, `/publico/catalogo/:id`,
-`/publico/categorias`).
+Portado: **el catálogo público** y **pedidos y compras** (el checkout, el
+seguimiento, el panel del taller y el historial del comprador con "repetir").
 
-Pendiente, por orden de lo que el front necesita: pedidos y compras (lo más
-grande, ~1.300 líneas en la Lambda), envíos con Skydropx, el panel del taller,
-`/cuenta/*` del comprador, el backoffice, los eventos, el canal en vivo por
-WebSocket y el worker de bordado.
+Pendiente, por orden de lo que el front necesita: **envíos con Skydropx**
+(cotizar, guías y el webhook de rastreo — hoy sólo se lee una cotización ya
+guardada, ver `src/envios`), los **correos** del pedido, el **carrito** y el
+resto de `/cuenta/*`, los **productos del taller**, el **backoffice**, los
+**eventos**, el **canal en vivo** por WebSocket (hoy el aviso se publica en
+Redis y falta el gateway que lo lea) y el **worker de bordado**.

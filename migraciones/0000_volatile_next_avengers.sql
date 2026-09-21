@@ -242,6 +242,8 @@ CREATE TABLE "compras" (
 	"productos_total" numeric(12, 2) DEFAULT '0' NOT NULL,
 	"total" numeric(12, 2) NOT NULL,
 	"huella_de_token" text,
+	"metodo_entrega" "metodo_entrega",
+	"direccion" jsonb,
 	"creado_en" timestamp with time zone DEFAULT now() NOT NULL,
 	"actualizado_en" timestamp with time zone DEFAULT now() NOT NULL
 );
@@ -272,18 +274,33 @@ CREATE TABLE "pedido_bitacora" (
 	"creado_en" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
+CREATE TABLE "pedido_partida_tallas" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"partida_id" uuid NOT NULL,
+	"talla" text NOT NULL,
+	"piezas" integer NOT NULL
+);
+--> statement-breakpoint
 CREATE TABLE "pedido_partidas" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"pedido_id" uuid NOT NULL,
 	"producto_id" uuid,
 	"nombre" text NOT NULL,
+	"sku" text,
+	"imagen_url" text,
+	"plantilla_id" text,
 	"color" text,
-	"talla" text,
+	"color_hex" text,
+	"lados" jsonb DEFAULT '[]'::jsonb NOT NULL,
 	"piezas" integer NOT NULL,
 	"precio_unitario" numeric(10, 2) NOT NULL,
 	"importe" numeric(12, 2) NOT NULL,
-	"arte" jsonb,
-	"diseno" jsonb
+	"arte" jsonb DEFAULT '[]'::jsonb NOT NULL,
+	"diseno_ruta" text,
+	"bordados" jsonb,
+	"dias_prometidos" integer,
+	"faltantes" jsonb DEFAULT '[]'::jsonb NOT NULL,
+	"orden" integer DEFAULT 0 NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "pedidos" (
@@ -356,6 +373,7 @@ ALTER TABLE "plantilla_de_compra_partidas" ADD CONSTRAINT "plantilla_de_compra_p
 ALTER TABLE "plantillas_de_compra" ADD CONSTRAINT "plantillas_de_compra_comprador_id_compradores_id_fk" FOREIGN KEY ("comprador_id") REFERENCES "public"."compradores"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "envios_de_paqueteria" ADD CONSTRAINT "envios_de_paqueteria_pedido_id_pedidos_id_fk" FOREIGN KEY ("pedido_id") REFERENCES "public"."pedidos"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "pedido_bitacora" ADD CONSTRAINT "pedido_bitacora_pedido_id_pedidos_id_fk" FOREIGN KEY ("pedido_id") REFERENCES "public"."pedidos"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "pedido_partida_tallas" ADD CONSTRAINT "pedido_partida_tallas_partida_id_pedido_partidas_id_fk" FOREIGN KEY ("partida_id") REFERENCES "public"."pedido_partidas"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "pedido_partidas" ADD CONSTRAINT "pedido_partidas_pedido_id_pedidos_id_fk" FOREIGN KEY ("pedido_id") REFERENCES "public"."pedidos"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "pedido_partidas" ADD CONSTRAINT "pedido_partidas_producto_id_productos_id_fk" FOREIGN KEY ("producto_id") REFERENCES "public"."productos"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "pedidos" ADD CONSTRAINT "pedidos_compra_id_compras_id_fk" FOREIGN KEY ("compra_id") REFERENCES "public"."compras"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
@@ -387,7 +405,8 @@ CREATE INDEX "compras_correo_creado" ON "compras" USING btree ("correo","creado_
 CREATE INDEX "cotizaciones_de_envio_expira" ON "cotizaciones_de_envio" USING btree ("expira_en");--> statement-breakpoint
 CREATE INDEX "envios_de_paqueteria_pedido" ON "envios_de_paqueteria" USING btree ("pedido_id");--> statement-breakpoint
 CREATE INDEX "pedido_bitacora_pedido" ON "pedido_bitacora" USING btree ("pedido_id","creado_en");--> statement-breakpoint
-CREATE INDEX "pedido_partidas_pedido" ON "pedido_partidas" USING btree ("pedido_id");--> statement-breakpoint
+CREATE UNIQUE INDEX "pedido_partida_tallas_unico" ON "pedido_partida_tallas" USING btree ("partida_id","talla");--> statement-breakpoint
+CREATE INDEX "pedido_partidas_pedido" ON "pedido_partidas" USING btree ("pedido_id","orden");--> statement-breakpoint
 CREATE UNIQUE INDEX "pedidos_folio_unico" ON "pedidos" USING btree ("folio");--> statement-breakpoint
 CREATE INDEX "pedidos_taller_creado" ON "pedidos" USING btree ("taller_id","creado_en");--> statement-breakpoint
 CREATE INDEX "pedidos_estado_actualizado" ON "pedidos" USING btree ("estado","actualizado_en");--> statement-breakpoint
