@@ -11,8 +11,10 @@ import { CuentaModule } from "./cuenta/cuenta.module";
 import { CorreoModule } from "./correo/correo.module";
 import { DbModule } from "./db/db.module";
 import { EnviosModule } from "./envios/envios.module";
+import { EventosModule } from "./eventos/eventos.module";
 import { PedidosModule } from "./pedidos/pedidos.module";
 import { SaludModule } from "./salud/salud.module";
+import { SubidasModule } from "./subidas/subidas.module";
 import { TallerModule } from "./taller/taller.module";
 import { VivoModule } from "./vivo/vivo.module";
 
@@ -30,6 +32,8 @@ import { VivoModule } from "./vivo/vivo.module";
 		CatalogoModule,
 		PedidosModule,
 		CuentaModule,
+		SubidasModule,
+		EventosModule,
 		AdminModule,
 		TallerModule,
 		BordadoModule,

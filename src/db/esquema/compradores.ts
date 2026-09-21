@@ -13,7 +13,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { productos } from "./catalogo";
 import { pedidoPartidas, pedidos } from "./pedidos";
-import { estadoEvento, marcas } from "./comun";
+import { estadoEvento, marcas, personalizacionEvento } from "./comun";
 
 /**
  * El comprador con cuenta.
@@ -312,6 +312,19 @@ export const eventos = pgTable(
 	],
 );
 
+/**
+ * Un producto del evento.
+ *
+ * EL ID ES PARTE DEL CONTRATO PÚBLICO: el diseño base, los diseños de los
+ * invitados y las líneas de cada participación apuntan a él (`eventoItemId`),
+ * y la ruta del arte en S3 lo lleva dentro. Editar las fechas o la dirección
+ * del borrador NO puede regenerarlo, o el arte ya configurado se desprende.
+ *
+ * `instantanea` es lo que el organizador vio al armar el evento —nombre, foto,
+ * precio orientativo, tallas y colores— y es contra lo que se validan talla y
+ * color de cada participación. EL PRECIO NO SALE DE AQUÍ: al participar se
+ * vuelve a leer `producto_precios`, porque lo que se cobra lo decide la base.
+ */
 export const eventoProductos = pgTable(
 	"evento_productos",
 	{
@@ -322,17 +335,30 @@ export const eventoProductos = pgTable(
 		productoId: uuid("producto_id")
 			.notNull()
 			.references(() => productos.id, { onDelete: "cascade" }),
-		/** Lo que el organizador deja tocar a quien participa. */
-		reglas: jsonb(),
+		/** El orden en que el organizador los eligió, que es el que se enseña. */
+		orden: integer().notNull().default(0),
+		personalizacion: personalizacionEvento().notNull().default("libre"),
+		/**
+		 * `{ arteId, ruta }`. La ruta la construye el servidor con el `sub` del
+		 * organizador: el navegador sólo manda el `arteId`.
+		 */
+		disenoBase: jsonb("diseno_base"),
+		instantanea: jsonb().notNull(),
 	},
-	(t) => [index("evento_productos_evento").on(t.eventoId)],
+	(t) => [index("evento_productos_evento").on(t.eventoId, t.orden)],
 );
 
 /** Lo que manda quien entra por el enlace público. No exige cuenta. */
 export const eventoParticipaciones = pgTable(
 	"evento_participaciones",
 	{
-		id: uuid().primaryKey().defaultRandom(),
+		/**
+		 * EL ID LO MANDA EL NAVEGADOR (`intentoId`) y es lo que hace idempotente
+		 * el envío: si la red corta después de guardar y el invitado reintenta,
+		 * la llave primaria choca y se devuelve la misma participación en vez
+		 * de duplicarla.
+		 */
+		id: uuid().primaryKey(),
 		eventoId: text("evento_id")
 			.notNull()
 			.references(() => eventos.id, { onDelete: "cascade" }),

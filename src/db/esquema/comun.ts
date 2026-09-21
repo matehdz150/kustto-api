@@ -59,3 +59,17 @@ export const estadoEvento = pgEnum("estado_evento", [
 	"publicado",
 	"cerrado",
 ]);
+
+/**
+ * Qué puede hacer quien participa con el diseño de un producto del evento.
+ *
+ * - `libre`: edita el diseño base y agrega lo suyo.
+ * - `bloqueada`: la base no se mueve ni se borra; el invitado agrega encima.
+ *   Por eso no se puede publicar un producto `bloqueado` sin diseño base.
+ * - `sin_personalizacion`: sólo talla, color y piezas. No firma subidas.
+ */
+export const personalizacionEvento = pgEnum("personalizacion_evento", [
+	"libre",
+	"bloqueada",
+	"sin_personalizacion",
+]);

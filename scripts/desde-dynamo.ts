@@ -758,14 +758,34 @@ async function principal() {
 				.delete(e.eventoProductos)
 				.where(eq(e.eventoProductos.eventoId, it.id));
 
-			for (const p of it.productos ?? []) {
+			/* En DynamoDB el renglón era un objeto con todo dentro: la regla de
+			   personalización, el diseño base y la copia del producto. Aquí la
+			   copia va a `instantanea` y lo demás a sus columnas. El id se
+			   conserva: el arte de los invitados lo lleva en su ruta de S3. */
+			for (const [orden, p] of (it.productos ?? []).entries()) {
 				await db
 					.insert(e.eventoProductos)
 					.values({
 						id: opcional(p.id) ?? undefined,
 						eventoId: it.id,
 						productoId: p.productoId ?? p.productId,
-						reglas: p.reglas ?? null,
+						orden,
+						personalizacion: [
+							"libre",
+							"bloqueada",
+							"sin_personalizacion",
+						].includes(p.personalizacion)
+							? p.personalizacion
+							: "libre",
+						disenoBase: p.disenoBase ?? null,
+						instantanea: {
+							nombre: p.nombre ?? "Producto",
+							imagen: p.imagen ?? null,
+							proveedorId: p.proveedorId ?? "",
+							precioDesde: Number(p.precioDesde ?? 0),
+							colores: p.colores ?? [],
+							tallas: p.tallas?.length ? p.tallas : ["Única"],
+						},
 					})
 					.onConflictDoNothing();
 				anotar("evento_productos", 1);

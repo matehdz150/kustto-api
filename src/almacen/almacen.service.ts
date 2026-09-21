@@ -3,6 +3,7 @@ import {
 	CopyObjectCommand,
 	DeleteObjectCommand,
 	GetObjectCommand,
+	HeadObjectCommand,
 	PutObjectCommand,
 	S3Client,
 } from "@aws-sdk/client-s3";
@@ -188,6 +189,24 @@ export class AlmacenService {
 				Metadata: { sha256 },
 			}),
 		);
+	}
+
+	/**
+	 * Si un objeto del bucket público ya está.
+	 *
+	 * Firmar una subida no quiere decir que el navegador la haya hecho: el
+	 * invitado de un evento puede cerrar la pestaña a medias. Antes de apuntar
+	 * una participación a un diseño se pregunta a S3 si el archivo existe.
+	 */
+	async existe(clave: string) {
+		try {
+			await this.s3.send(
+				new HeadObjectCommand({ Bucket: this.env.S3_BUCKET_PUBLICO, Key: clave }),
+			);
+			return true;
+		} catch {
+			return false;
+		}
 	}
 
 	/** Nunca lanza: borrar un objeto que ya no está es el resultado buscado. */
