@@ -1,5 +1,11 @@
 import { Readable } from "node:stream";
-import { GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import {
+	CopyObjectCommand,
+	DeleteObjectCommand,
+	GetObjectCommand,
+	PutObjectCommand,
+	S3Client,
+} from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { Inject, Injectable } from "@nestjs/common";
 import { ENTORNO } from "../config/config.module";
@@ -41,6 +47,77 @@ export class AlmacenService {
 			url: await getSignedUrl(this.s3, orden, { expiresIn: segundos }),
 			clave,
 		};
+	}
+
+	/**
+	 * Una URL firmada para subir al bucket PÚBLICO.
+	 *
+	 * "Público" es el nombre del bucket, no su política: sigue cerrado y se
+	 * sirve por rewrite desde nuestro origen. Ahí van los medios que el editor
+	 * vuelve a cargar —imágenes de la biblioteca, diseños guardados—, y por eso
+	 * lo que se devuelve es una RUTA RELATIVA y nunca la de S3: el editor la
+	 * mete en un lienzo y luego exporta ese lienzo, y una imagen de otro origen
+	 * lo contamina y `toDataURL` empieza a lanzar `SecurityError`.
+	 *
+	 * EL TAMAÑO VA DENTRO DE LA FIRMA (`ContentLength`), así que lo aplica S3.
+	 * Sin eso el tope sería una promesa de la que nadie se encarga.
+	 */
+	async urlParaMedios(
+		clave: string,
+		tipo: string,
+		bytes: number,
+		segundos = 300,
+	) {
+		const orden = new PutObjectCommand({
+			Bucket: this.env.S3_BUCKET_PUBLICO,
+			Key: clave,
+			ContentType: tipo,
+			ContentLength: bytes,
+		});
+
+		return {
+			uploadUrl: await getSignedUrl(this.s3, orden, { expiresIn: segundos }),
+			url: `/${clave}`,
+		};
+	}
+
+	/**
+	 * Copia un objeto dentro del bucket, de servidor a servidor.
+	 *
+	 * NINGÚN BYTE PASA POR EL NAVEGADOR, y de eso depende que ascender un
+	 * diseño o repetir un pedido sea un clic: el arte son varios MB y ya está
+	 * en S3. Que el navegador lo baje para volver a subirlo dobla el tráfico de
+	 * algo que está a un metro de distancia.
+	 *
+	 * Devuelve `false` en vez de lanzar si el origen no está: quien llama
+	 * decide si eso es fatal. Al ascender un diseño, sin el lienzo no hay
+	 * diseño; sin la miniatura, sólo se ve peor.
+	 */
+	async copiar(desde: string, hasta: string) {
+		try {
+			await this.s3.send(
+				new CopyObjectCommand({
+					Bucket: this.env.S3_BUCKET_PUBLICO,
+					CopySource: `${this.env.S3_BUCKET_PUBLICO}/${desde}`,
+					Key: hasta,
+				}),
+			);
+			return true;
+		} catch {
+			return false;
+		}
+	}
+
+	/** Nunca lanza: borrar un objeto que ya no está es el resultado buscado. */
+	async borrar(clave: string) {
+		await this.s3
+			.send(
+				new DeleteObjectCommand({
+					Bucket: this.env.S3_BUCKET_PUBLICO,
+					Key: clave,
+				}),
+			)
+			.catch(() => undefined);
 	}
 
 	/** Leer un objeto para servirlo desde nuestro origen. Ver el comentario de arriba. */

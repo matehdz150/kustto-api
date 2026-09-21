@@ -60,11 +60,32 @@ const esquema = z.object({
 	SMTP_URL: opcional(z.string().url()),
 	CORREO_DESDE: z.string().default("Kustto <hola@kustto.com.mx>"),
 
-	/* ─── Paquetería ──────────────────────────────────────────────────────
-	   Skydropx admite 2 peticiones por segundo. Siete clics en "+1" tumbaron
-	   el checkout una vez; el límite se respeta en la cola, no aquí. */
-	SKYDROPX_API_KEY: opcional(z.string()),
+	/* ─── Paquetería ────────────────────────────────────────────────────── */
+	SKYDROPX_HOST: z.string().url().default("https://sb-pro.skydropx.com"),
+	SKYDROPX_CLIENT_ID: opcional(z.string()),
+	SKYDROPX_CLIENT_SECRET: opcional(z.string()),
+	/**
+	 * Cuántas peticiones por segundo admite la cuenta.
+	 *
+	 * SON DOS, y es poquísimo: un solo cliente tecleando su código postal lo
+	 * revienta si se cotiza en cada tecla. Se cuenta en Redis, común a todas
+	 * las instancias — en las Lambdas no se podía y había que espaciar a mano.
+	 */
+	SKYDROPX_POR_SEGUNDO: z.coerce.number().default(2),
+	/**
+	 * Qué paqueterías se ofrecen. Vacío = todas.
+	 *
+	 * Cotizar no es poder despachar: si la credencial de una no está dada de
+	 * alta, la guía se compra y muere, con el cliente ya habiendo pagado ese
+	 * envío. Pasó con ampm y con tresguerras.
+	 */
+	SKYDROPX_PAQUETERIAS: z.string().default(""),
+	/** Firma el webhook de rastreo. Sin esto, el webhook se rechaza entero. */
 	SKYDROPX_WEBHOOK_SECRETO: opcional(z.string()),
+	/** La clave del SAT de lo que se manda. 53102500 = ropa. */
+	KUSTTO_CLAVE_SAT: z.string().default("53102500"),
+	/** El tipo de empaque de la carta porte. 4G = caja de cartón. */
+	KUSTTO_TIPO_EMPAQUE: z.string().default("4G"),
 
 	/** El panel del editor de bordado. Apagado hasta que haya test-sew. */
 	BORDADO_ACTIVO: z.coerce.boolean().default(false),

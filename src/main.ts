@@ -5,7 +5,18 @@ import { ENTORNO } from "./config/config.module";
 import type { Entorno } from "./config/entorno";
 
 async function arrancar() {
-	const app = await NestFactory.create(AppModule, { bufferLogs: true });
+	const app = await NestFactory.create(AppModule, {
+		bufferLogs: true,
+		/**
+		 * Guarda los BYTES que llegaron, además del cuerpo ya parseado.
+		 *
+		 * Lo necesita el webhook de la paquetería: su firma HMAC es sobre el
+		 * cuerpo crudo, y `JSON.stringify` de lo parseado no da los mismos bytes
+		 * —cambia el orden de las claves, los espacios y el escapado—, así que
+		 * la firma no calzaría nunca y el webhook se rechazaría siempre.
+		 */
+		rawBody: true,
+	});
 	const env = app.get<Entorno>(ENTORNO);
 
 	/**

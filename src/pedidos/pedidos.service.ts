@@ -8,7 +8,12 @@ import {
 	UnauthorizedException,
 } from "@nestjs/common";
 import { and, eq, inArray, sql } from "drizzle-orm";
+import type { Queue } from "bullmq";
 import { AvisosService } from "../avisos/avisos.service";
+import { COLAS } from "../colas/colas";
+import { COLA } from "../colas/colas.module";
+import type { Correo } from "../correo/correo.service";
+import { pedidoParaTaller, pedidoRecibido } from "../correo/plantillas";
 import { DB, type Db } from "../db/db.module";
 import * as e from "../db/esquema";
 import { EnviosService } from "../envios/envios.service";
@@ -40,6 +45,7 @@ export class PedidosService {
 		@Inject(DB) private readonly db: Db,
 		private readonly envios: EnviosService,
 		private readonly avisos: AvisosService,
+		@Inject(COLA(COLAS.correo)) private readonly correo: Queue<Correo>,
 	) {}
 
 	/**
@@ -121,12 +127,14 @@ export class PedidosService {
 			0,
 		);
 
+		const datosPiezas = partes.reduce((n, p) => n + p.piezas, 0);
+
 		const { compraId, folio, folios } = await this.escribirCompra({
 			comprador,
 			partes,
 			productosTotal,
 			total: aPesos(productosTotal + enviosTotal),
-			piezas: partes.reduce((n, p) => n + p.piezas, 0),
+			piezas: datosPiezas,
 			huellaDeToken,
 			entregaComun: this.entregaComun([...entregas.values()]),
 		});
@@ -140,6 +148,17 @@ export class PedidosService {
 				folio: folios[parte.pedidoId],
 			});
 		}
+
+		await this.avisarPorCorreo({
+			comprador,
+			compraId,
+			folio,
+			folios,
+			token,
+			total: aPesos(productosTotal + enviosTotal),
+			piezas: datosPiezas,
+			partes,
+		});
 
 		return {
 			/** El id de la COMPRA: es lo que abre el enlace de seguimiento. */
@@ -237,6 +256,85 @@ export class PedidosService {
 			createdAt: compra.creadoEn.toISOString(),
 			partes: partes.map(paraComprador),
 		};
+	}
+
+	/**
+	 * Los correos de la compra, encolados.
+	 *
+	 * VAN A LA COLA Y NO SE MANDAN AQUÍ. La compra ya está cobrada y escrita: si
+	 * el servidor de correo tarda o se cae, quien acaba de pagar no puede
+	 * quedarse mirando una rueda ni recibir un error. BullMQ reintenta.
+	 *
+	 * UN CORREO AL COMPRADOR POR TODA LA COMPRA, no uno por taller: él hizo una
+	 * compra, y tres correos por lo mismo enseñan a ignorarlos. Es el que
+	 * importa — lleva su enlace de seguimiento, y de ese token sólo guardamos
+	 * la huella. Si no le llega y cierra la pestaña, no hay forma de
+	 * devolvérselo ni por soporte.
+	 *
+	 * Y UNO POR TALLER, con SU parte: su folio, sus piezas y su importe.
+	 */
+	private async avisarPorCorreo(datos: {
+		comprador: { nombre: string; email: string };
+		compraId: string;
+		folio: string;
+		folios: Record<string, string>;
+		token: string;
+		total: number;
+		piezas: number;
+		partes: {
+			tallerId: string;
+			pedidoId: string;
+			detalladas: { partida: Partida }[];
+			productosTotal: number;
+			piezas: number;
+			entrega: Entrega;
+		}[];
+	}) {
+		const primera = datos.partes[0]?.detalladas[0]?.partida;
+
+		await this.correo.add(
+			"pedido-recibido",
+			pedidoRecibido({
+				para: datos.comprador.email,
+				nombre: datos.comprador.nombre,
+				folio: datos.folio,
+				enlace: `/pedido?id=${encodeURIComponent(datos.compraId)}&token=${encodeURIComponent(datos.token)}`,
+				total: datos.total,
+				piezas: datos.piezas,
+				producto: primera?.nombre ?? "Tu pedido",
+				dias: primera?.diasPrometidos ?? null,
+			}),
+		);
+
+		/* El correo del taller se lee AQUÍ y no antes: si la compra no llega a
+		   escribirse, estas lecturas sobran. */
+		const talleres = await this.db
+			.select({
+				id: e.talleres.id,
+				correo: e.talleres.correo,
+				nombre: e.talleres.nombre,
+				nombrePublico: e.talleres.nombrePublico,
+			})
+			.from(e.talleres)
+			.where(inArray(e.talleres.id, datos.partes.map((p) => p.tallerId)));
+
+		for (const parte of datos.partes) {
+			const taller = talleres.find((t) => t.id === parte.tallerId);
+			if (!taller?.correo) continue;
+
+			await this.correo.add(
+				"pedido-para-taller",
+				pedidoParaTaller({
+					para: taller.correo,
+					taller: taller.nombrePublico ?? taller.nombre,
+					folio: datos.folios[parte.pedidoId],
+					piezas: parte.piezas,
+					producto: parte.detalladas[0]?.partida.nombre ?? "Un producto",
+					total: parte.productosTotal,
+					metodo: parte.entrega.metodo,
+				}),
+			);
+		}
 	}
 
 	/* ─── Lo que sostiene todo lo de arriba ───────────────────────────────── */

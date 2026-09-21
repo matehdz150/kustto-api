@@ -5,6 +5,7 @@ import { AvisosModule } from "./avisos/avisos.module";
 import { CatalogoModule } from "./catalogo/catalogo.module";
 import { ColasModule } from "./colas/colas.module";
 import { ConfigModule } from "./config/config.module";
+import { CuentaModule } from "./cuenta/cuenta.module";
 import { CorreoModule } from "./correo/correo.module";
 import { DbModule } from "./db/db.module";
 import { EnviosModule } from "./envios/envios.module";
@@ -24,6 +25,7 @@ import { SaludModule } from "./salud/salud.module";
 		SaludModule,
 		CatalogoModule,
 		PedidosModule,
+		CuentaModule,
 	],
 })
 export class AppModule {}

@@ -114,21 +114,65 @@ negativo y eso es información — un -2 le dice al taller que compre 2.
 tiempo constante. Pedir no exige cuenta, así que `/pedido?id=…&token=…` es la
 única forma de que un invitado vea el suyo.
 
-Probar el ciclo entero —transiciones, cancelación, carrera entre dos personas
-del taller, aislamiento entre talleres— contra la base de `docker compose`:
+## Envíos
+
+**El paquete lo arma el servidor, siempre.** De fuera sólo se acepta qué se
+pide y a dónde va; el peso, las medidas y el origen salen de la base. Si el
+navegador pudiera mandar el peso, mandaría el precio del envío.
+
+El peso es exacto —la suma de lo que pesa cada talla— y **la caja es una
+aproximación**: se apilan las piezas a lo alto y se conserva el largo y el
+ancho mayores. Por eso el taller confirma las medidas de verdad al terminar, y
+sobre ésas se **recotiza** antes de comprar la guía: sobre la vieja, la
+paquetería repesa y factura la diferencia semanas después.
+
+**El límite de Skydropx son 2 peticiones por segundo**, y ahora se cuenta de
+verdad: una ventana deslizante en Redis, común a todas las instancias y a los
+workers. En las Lambdas no se podía —cada invocación vivía en su contenedor— y
+lo único que quedaba era espaciar a mano 600 ms entre cotizaciones.
+
+**Las cotizaciones se guardan.** Antes el checkout volvía a preguntarle a
+Skydropx en mitad del cobro; ahora queda en `cotizaciones_de_envio` y el
+checkout la lee de ahí. Caducada es lo mismo que inexistente.
+
+**El webhook de rastreo verifica la firma HMAC del cuerpo crudo** (por eso
+`rawBody: true` en `main.ts`) y **un estado sólo avanza**: los avisos de la
+paquetería no llegan en orden y un `delivered` puede adelantar a un
+`in_transit`.
+
+## Correos
+
+Van por SMTP y **a la cola**, no se mandan dentro de la petición: la compra ya
+está cobrada y quien acaba de pagar no puede quedarse mirando una rueda porque
+el servidor de correo tarde.
+
+Las plantillas están **en un solo sitio**. En las Lambdas vivían duplicadas con
+una nota de "copia el archivo entero al cambiarlo", y dos de ellas —"va en
+camino" y "llegó"— salen por dos caminos: el taller a mano, o la paquetería por
+webhook. Si divergían, el mismo cliente recibía un texto u otro según quién
+movió el pedido.
+
+## Probarlo
 
 ```bash
-pnpm probar:pedidos
+pnpm probar:pedidos    # el ciclo del pedido: transiciones, cancelación, carreras
+pnpm probar:envios     # limitador, cotización guardada, webhook, carrito, cuenta
 ```
+
+Corren contra la base de `docker compose` y por el código real, no por HTTP:
+así se prueba la lógica sin tener que conseguir un token de Cognito.
 
 ## Lo que todavía no está
 
 Portado: **el catálogo público** y **pedidos y compras** (el checkout, el
 seguimiento, el panel del taller y el historial del comprador con "repetir").
 
-Pendiente, por orden de lo que el front necesita: **envíos con Skydropx**
-(cotizar, guías y el webhook de rastreo — hoy sólo se lee una cotización ya
-guardada, ver `src/envios`), los **correos** del pedido, el **carrito** y el
-resto de `/cuenta/*`, los **productos del taller**, el **backoffice**, los
-**eventos**, el **canal en vivo** por WebSocket (hoy el aviso se publica en
-Redis y falta el gateway que lo lea) y el **worker de bordado**.
+Portado también: **envíos completos** (cotizar, cotizar por taller, guías con
+recotización y el webhook de rastreo), los **correos** del pedido, el
+**carrito**, el **perfil**, los **favoritos**, los **diseños guardados** y la
+**biblioteca de imágenes**.
+
+Pendiente: las **plantillas de compra** de `/cuenta`, los **eventos**, los
+**productos del taller** y su perfil, el **backoffice**, el **canal en vivo**
+por WebSocket (el aviso ya se publica en Redis; falta el gateway que lo lea) y
+el **worker de bordado**.

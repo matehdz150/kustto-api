@@ -3,10 +3,20 @@ import {
 	ConflictException,
 	Inject,
 	Injectable,
+	Logger,
 	NotFoundException,
 } from "@nestjs/common";
 import { and, desc, eq, sql } from "drizzle-orm";
+import type { Queue } from "bullmq";
 import { AvisosService } from "../avisos/avisos.service";
+import { COLAS } from "../colas/colas";
+import { COLA } from "../colas/colas.module";
+import type { Correo } from "../correo/correo.service";
+import {
+	pedidoEntregado,
+	pedidoEnviado,
+	pedidoListo,
+} from "../correo/plantillas";
 import { DB, type Db } from "../db/db.module";
 import * as e from "../db/esquema";
 import { ajustarExistencias } from "./existencias";
@@ -61,10 +71,13 @@ function permitidos(metodoEntrega: string, actual: Estado): Estado[] {
 
 @Injectable()
 export class PedidosTallerService {
+	private readonly log = new Logger(PedidosTallerService.name);
+
 	constructor(
 		@Inject(DB) private readonly db: Db,
 		private readonly pedidos: PedidosService,
 		private readonly avisos: AvisosService,
+		@Inject(COLA(COLAS.correo)) private readonly correo: Queue<Correo>,
 	) {}
 
 	/** Su bandeja: sus pedidos, del más nuevo al más viejo. */
@@ -154,7 +167,116 @@ export class PedidosTallerService {
 		});
 
 		const [completo] = await this.pedidos.conPartidas([movido]);
+		await this.avisarAlComprador(tallerId, completo, destino);
+
 		return paraTaller(completo);
+	}
+
+	/**
+	 * Los correos que se le mandan al comprador cuando el taller mueve el pedido.
+	 *
+	 * VAN DESPUÉS DEL UPDATE CON SU CONDICIÓN: si dos personas del taller le dan
+	 * a la vez, sólo una llega hasta aquí y sale UN correo.
+	 *
+	 * DE `produccion` NO SE AVISA A PROPÓSITO: entre que entra el pedido y que
+	 * está hecho no hay nada que el comprador pueda hacer, y un correo que no
+	 * pide nada enseña a ignorar los que sí importan.
+	 */
+	private async avisarAlComprador(
+		tallerId: string,
+		pedido: Awaited<ReturnType<PedidosService["conPartidas"]>>[number],
+		destino: Estado,
+	) {
+		if (!pedido.correo) return;
+
+		const producto = pedido.lineas[0]?.nombre ?? "Tu pedido";
+		const nombre = pedido.nombre ?? "";
+
+		try {
+			if (destino === "listo") {
+				/* Con `recoger` ÉSTE es el correo del pedido: sin él, quien compró no
+				   tiene forma de enterarse de que puede ir por su prenda, porque
+				   después de esto ya no hay más estados que le avisen de nada. Por
+				   eso lleva la dirección del taller y su WhatsApp.
+
+				   Con envío se manda igual, pero es sólo informativo: el que importa
+				   es el de "va en camino", que trae el rastreo. */
+				const taller =
+					pedido.metodoEntrega === "recoger"
+						? (
+								await this.db
+									.select()
+									.from(e.talleres)
+									.where(eq(e.talleres.id, tallerId))
+									.limit(1)
+							)[0]
+						: undefined;
+
+				const r = taller?.recoleccion as Record<string, any> | null;
+
+				await this.correo.add(
+					"pedido-listo",
+					pedidoListo({
+						para: pedido.correo,
+						nombre,
+						folio: pedido.folio,
+						producto,
+						piezas: pedido.piezas,
+						metodo: pedido.metodoEntrega,
+						taller: taller ? (taller.nombrePublico ?? taller.nombre) : null,
+						direccion: r?.cp
+							? [r.calle, r.numero, r.colonia, r.ciudad, r.estado, r.cp]
+									.filter(Boolean)
+									.join(", ")
+							: null,
+						whatsapp: taller?.whatsapp ?? null,
+					}),
+				);
+			}
+
+			if (destino === "enviado") {
+				const guia = pedido.guia as Record<string, any> | null;
+
+				/* SIN NÚMERO DE RASTREO NO SE MANDA: un "va en camino" sin nada que
+				   rastrear no le sirve a nadie. El mismo correo lo manda el webhook
+				   de la paquetería cuando es ella quien mueve el pedido. */
+				if (guia?.rastreo) {
+					await this.correo.add(
+						"pedido-enviado",
+						pedidoEnviado({
+							para: pedido.correo,
+							nombre,
+							folio: pedido.folio,
+							paqueteria: guia.paqueteria ?? "la paquetería",
+							rastreo: String(guia.rastreo),
+							rastreoUrl: guia.rastreoUrl ?? null,
+						}),
+					);
+				}
+			}
+
+			/* Sólo llega aquí lo que se RECOGIÓ en el taller: con envío,
+			   `entregado` lo pone la paquetería por webhook y `permitidos()`
+			   cierra este camino. */
+			if (destino === "entregado") {
+				await this.correo.add(
+					"pedido-entregado",
+					pedidoEntregado({
+						para: pedido.correo,
+						nombre,
+						folio: pedido.folio,
+						producto,
+						metodo: pedido.metodoEntrega,
+					}),
+				);
+			}
+		} catch (error) {
+			/* El pedido YA se movió y el taller ya lo vio moverse. Un correo que
+			   no se pudo encolar no puede deshacer eso. */
+			this.log.error(
+				`No pude encolar el aviso de ${pedido.folio}: ${(error as Error).message}`,
+			);
+		}
 	}
 
 	/**
