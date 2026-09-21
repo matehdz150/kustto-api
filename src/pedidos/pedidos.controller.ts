@@ -100,4 +100,14 @@ export class PedidosCompradorController {
 	) {
 		return this.pedidos.repetir(quien(peticion), id);
 	}
+
+	/** El GET compara; esto deja las líneas elegidas en el carrito. */
+	@Post(":id/repetir")
+	repetirAlCarrito(
+		@Req() peticion: PeticionConIdentidad,
+		@Param("id", ParseUUIDPipe) id: string,
+		@Body() cuerpo: Record<string, unknown>,
+	) {
+		return this.pedidos.alCarrito(quien(peticion), id, cuerpo);
+	}
 }

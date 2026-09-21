@@ -143,7 +143,13 @@ export class CategoriasService {
 }
 
 /** En inglés porque es lo que el backoffice y el catálogo ya leen. */
-function aSalida(fila: typeof e.categorias.$inferSelect) {
+/**
+ * La categoría con los nombres que lee el front (`name`, `image`…).
+ *
+ * La usan TAMBIÉN `/publico/categorias`: estuvo devolviendo las filas crudas
+ * (`nombre`, `imagenUrl`) y los chips del catálogo se quedaban sin nombre.
+ */
+export function aSalida(fila: typeof e.categorias.$inferSelect) {
 	return {
 		id: fila.id,
 		name: fila.nombre,

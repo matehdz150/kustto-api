@@ -47,11 +47,13 @@ export class ImagenesService {
 	async listar(quien: Identidad) {
 		correoDe(quien);
 
-		return this.db
+		const filas = await this.db
 			.select()
 			.from(e.imagenesDeComprador)
 			.where(eq(e.imagenesDeComprador.compradorId, quien.sub))
 			.orderBy(desc(e.imagenesDeComprador.creadoEn));
+
+		return filas.map(aImagen);
 	}
 
 	/**
@@ -136,7 +138,7 @@ export class ImagenesService {
 			.onConflictDoNothing()
 			.returning();
 
-		return fila ?? { id, url };
+		return fila ? aImagen(fila) : { id, url };
 	}
 
 	/** La fila primero y el archivo después. Ver `DisenosService.borrar`. */
@@ -158,4 +160,19 @@ export class ImagenesService {
 		await this.almacen.borrar(fila.url.replace(/^\//, ""));
 		return { ok: true };
 	}
+}
+
+/**
+ * La imagen con la forma de la Lambda: `creadaEn`, en femenino, y sin el
+ * `compradorId` ni las marcas de la tabla, que al navegador no le dicen nada.
+ */
+function aImagen(fila: typeof e.imagenesDeComprador.$inferSelect) {
+	return {
+		id: fila.id,
+		nombre: fila.nombre,
+		url: fila.url,
+		ancho: fila.ancho,
+		alto: fila.alto,
+		creadaEn: fila.creadoEn.toISOString(),
+	};
 }

@@ -2,6 +2,7 @@ import { Inject, Injectable, NotFoundException } from "@nestjs/common";
 import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import { DB, type Db } from "../db/db.module";
 import * as e from "../db/esquema";
+import { aSalida } from "../admin/categorias.service";
 
 /**
  * La forma que espera el catálogo del front, INTACTA.
@@ -306,9 +307,11 @@ export class CatalogoService {
 
 	/** Las categorías, para los filtros y el menú. */
 	async categorias() {
-		return this.db
+		const filas = await this.db
 			.select()
 			.from(e.categorias)
 			.orderBy(asc(e.categorias.orden), asc(e.categorias.nombre));
+
+		return filas.map(aSalida);
 	}
 }

@@ -344,6 +344,8 @@ export class PedidosService {
 			nombre: String(c.comprador?.nombre ?? "").trim(),
 			email: String(c.comprador?.email ?? "").trim().toLowerCase(),
 			whatsapp: String(c.comprador?.whatsapp ?? "").trim() || null,
+			/* El tope es para que no quepa un documento, no una indicación. */
+			notas: String(c.comprador?.notas ?? "").trim().slice(0, 1000) || null,
 		};
 
 		if (!comprador.nombre) throw new BadRequestException("Falta tu nombre");
@@ -554,7 +556,12 @@ export class PedidosService {
 	 * existe: es un índice único.
 	 */
 	private async escribirCompra(datos: {
-		comprador: { nombre: string; email: string; whatsapp: string | null };
+		comprador: {
+			nombre: string;
+			email: string;
+			whatsapp: string | null;
+			notas: string | null;
+		};
 		partes: {
 			tallerId: string;
 			pedidoId: string;
@@ -611,6 +618,7 @@ export class PedidosService {
 							correo: comprador.email,
 							nombre: comprador.nombre,
 							whatsapp: comprador.whatsapp,
+							notas: comprador.notas,
 							piezas: parte.piezas,
 							metodoEntrega: parte.entrega.metodo,
 							/* Se guarda TAL COMO SE CAPTURÓ y no se vuelve a tocar: es lo

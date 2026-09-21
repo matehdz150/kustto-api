@@ -11,6 +11,7 @@ import type { Identidad } from "../auth/cognito";
 import { DB, type Db } from "../db/db.module";
 import * as e from "../db/esquema";
 import { correoDe, idOrdenable } from "./comun";
+import { copiarArteDePedido } from "../pedidos/arte-al-carrito";
 import { PerfilService } from "./perfil.service";
 
 type Cuerpo = Record<string, any>;
@@ -361,45 +362,15 @@ export class PlantillasDeCompraService {
 
 		if (!suya) return null;
 
-		const carritoId = randomUUID();
-		const lados: Cuerpo[] = [];
-
-		for (const a of (suya.arte ?? []) as Cuerpo[]) {
-			const lado = String(a?.lado ?? "");
-			if (!lado) continue;
-
-			const hay = await this.almacen.copiar(
-				`medios/pedidos/${item.origen.pedidoId}/${item.origen.lineaId}-${lado}.png`,
-				`carritos/${carritoId}/${lado}-arte.png`,
-			);
-			if (!hay) continue;
-
-			for (const extra of ["colocacion", "prenda"]) {
-				await this.almacen.copiar(
-					`medios/pedidos/${item.origen.pedidoId}/${item.origen.lineaId}-${lado}-${extra}.png`,
-					`carritos/${carritoId}/${lado}-${extra}.png`,
-				);
-			}
-
-			/* Los PÍXELES del archivo, no los centímetros del área: el área se
-			   relee del producto al pedir —puede haber cambiado— pero el tamaño
-			   real impreso sale de cuántos píxeles tiene el arte que se copió. */
-			lados.push({
-				lado,
-				anchoPx: Math.trunc(Number(a?.anchoPx ?? 0)),
-				altoPx: Math.trunc(Number(a?.altoPx ?? 0)),
-				dpi: Math.trunc(Number(a?.dpi ?? 0)) || 300,
-			});
-		}
-
-		if (lados.length === 0) return null;
-
-		await this.almacen.copiar(
-			`medios/pedidos/${item.origen.pedidoId}/${item.origen.lineaId}-diseno.json`,
-			`carritos/${carritoId}/diseno.json`,
+		const copia = await copiarArteDePedido(
+			this.almacen,
+			item.origen.pedidoId,
+			item.origen.lineaId,
+			(suya.arte ?? []) as Cuerpo[],
 		);
+		if (!copia) return null;
 
-		return { carritoId, lados, miniatura: item.miniatura };
+		return { ...copia, miniatura: item.miniatura };
 	}
 
 	/**

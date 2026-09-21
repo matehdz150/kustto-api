@@ -96,6 +96,14 @@ export const pedidos = pgTable(
 		correo: text().notNull(),
 		nombre: text(),
 		whatsapp: text(),
+		/**
+		 * Lo que el cliente le escribe al taller en el checkout ("el logo más
+		 * chico", "entregar en recepción"). Lo lee el panel del taller.
+		 *
+		 * Faltó al portar y el checkout lo seguía mandando: se tiraba sin error
+		 * y el taller dejó de ver las indicaciones del cliente.
+		 */
+		notas: text(),
 		piezas: integer().notNull().default(0),
 		metodoEntrega: metodoEntrega("metodo_entrega").notNull().default("envio"),
 		/**

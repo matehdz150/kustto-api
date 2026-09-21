@@ -445,6 +445,7 @@ async function principal() {
 					correo: String(it.comprador?.email ?? "").toLowerCase(),
 					nombre: opcional(it.comprador?.nombre),
 					whatsapp: opcional(it.comprador?.whatsapp),
+					notas: opcional(it.comprador?.notas),
 					piezas: Number(it.piezas ?? 0),
 					metodoEntrega: it.entrega?.metodo === "recoger" ? "recoger" : "envio",
 					direccion: it.entrega?.direccion ?? null,

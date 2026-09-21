@@ -1,9 +1,17 @@
-import { ForbiddenException, Inject, Injectable, NotFoundException } from "@nestjs/common";
+import {
+	BadRequestException,
+	ForbiddenException,
+	Inject,
+	Injectable,
+	NotFoundException,
+} from "@nestjs/common";
 import { and, desc, eq, inArray } from "drizzle-orm";
+import { AlmacenService } from "../almacen/almacen.service";
 import type { Identidad } from "../auth/cognito";
 import { DB, type Db } from "../db/db.module";
 import * as e from "../db/esquema";
 import { extraPorLados } from "../precios/precios";
+import { copiarArteDePedido } from "./arte-al-carrito";
 import { aPesos } from "./dominio";
 import { claveDeVariante } from "./lineas";
 import { PedidosService } from "./pedidos.service";
@@ -14,6 +22,7 @@ export class PedidosCompradorService {
 	constructor(
 		@Inject(DB) private readonly db: Db,
 		private readonly pedidos: PedidosService,
+		private readonly almacen: AlmacenService,
 	) {}
 
 	/**
@@ -94,6 +103,88 @@ export class PedidosCompradorService {
 			).size,
 			lineas,
 		};
+	}
+
+	/**
+	 * Mete en el carrito las líneas elegidas de un pedido viejo.
+	 *
+	 * El arte se COPIA de servidor a servidor a `carritos/`: ya está en S3, y
+	 * que el navegador lo baje para volver a subirlo dobla el tráfico de algo
+	 * que está a un metro. Con varias líneas es la diferencia entre un clic y
+	 * un minuto mirando una barra.
+	 *
+	 * NO CREA EL PEDIDO. Devuelve artículos de carrito y ahí se acaba: el pedido
+	 * se sigue creando por el camino de siempre, con sus precios recalculados
+	 * desde la tabla. Repetir NO es una segunda forma de escribir pedidos.
+	 */
+	async alCarrito(quien: Identidad, id: string, cuerpo: Record<string, unknown>) {
+		const pedidas = cuerpo?.lineas;
+		if (!Array.isArray(pedidas) || pedidas.length === 0) {
+			throw new BadRequestException("Elige al menos una línea para repetir");
+		}
+		const quiere = new Set(pedidas.map(String));
+
+		const pedido = await this.suyoOFalla(quien, id);
+		const originales = pedido.lineas.filter((l) => quiere.has(l.id));
+		if (originales.length === 0) {
+			throw new NotFoundException("Ese pedido no tiene esas líneas");
+		}
+
+		/* Se vuelve a comparar contra el catálogo AQUÍ, aunque el front ya lo
+		   hizo al enseñar la pantalla. Entre que se miró y se pulsó pudo
+		   archivarse un producto, y meter en el carrito algo que ya no se puede
+		   producir sólo mueve el error al final del checkout. */
+		const hoy = await this.catalogoDeHoy(
+			originales.map((l) => l.productoId).filter((x): x is string => !!x),
+		);
+
+		const articulos = [];
+		const descartadas = [];
+
+		for (const original of originales) {
+			const linea = this.compararLinea(original, hoy);
+
+			if (linea.estado === "no_disponible") {
+				descartadas.push({ producto: linea.producto, porque: linea.porque });
+				continue;
+			}
+
+			const copia = await copiarArteDePedido(
+				this.almacen,
+				pedido.id,
+				original.id,
+				(original.arte ?? []) as Record<string, unknown>[],
+			);
+
+			if (!copia) {
+				descartadas.push({
+					producto: linea.producto,
+					porque: "Ya no conservamos los archivos de ese diseño",
+				});
+				continue;
+			}
+
+			articulos.push({
+				carritoId: copia.carritoId,
+				productoId: linea.productoId,
+				nombre: linea.producto,
+				proveedorId: linea.proveedorId,
+				colorPrenda: linea.colorPrenda,
+				lados: copia.lados,
+				tallas: linea.tallas,
+				/* Para el resumen mientras decide, y es el precio de HOY: enseñar
+				   el de entonces haría que el total del carrito no cuadre con el
+				   cobro. */
+				precioUnitario: linea.unitario ?? 0,
+				miniatura: linea.miniatura,
+			});
+		}
+
+		if (articulos.length === 0) {
+			throw new BadRequestException("Ninguna de esas líneas se puede volver a pedir");
+		}
+
+		return { articulos, descartadas };
 	}
 
 	/**
