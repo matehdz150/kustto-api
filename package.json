@@ -1,0 +1,61 @@
+{
+	"name": "kustto-api",
+	"version": "0.1.0",
+	"private": true,
+	"packageManager": "pnpm@10.19.0",
+	"scripts": {
+		"build": "nest build",
+		"dev": "nest start --watch",
+		"start": "node dist/main.js",
+		"db:generar": "drizzle-kit generate",
+		"db:migrar": "tsx src/db/migrar.ts",
+		"db:desde-dynamo": "tsx scripts/desde-dynamo.ts",
+		"lint": "biome check .",
+		"format": "biome format . --write",
+		"test": "vitest run"
+	},
+	"dependencies": {
+		"@aws-sdk/client-s3": "^3.716.0",
+		"@aws-sdk/s3-request-presigner": "^3.716.0",
+		"@nestjs/common": "^11.0.1",
+		"@nestjs/config": "^4.0.2",
+		"@nestjs/core": "^11.0.1",
+		"@nestjs/platform-express": "^11.0.1",
+		"@nestjs/platform-ws": "^11.0.1",
+		"@nestjs/websockets": "^11.0.1",
+		"bullmq": "^5.34.0",
+		"class-transformer": "^0.5.1",
+		"class-validator": "^0.15.1",
+		"drizzle-orm": "^0.45.0",
+		"ioredis": "^5.4.2",
+		"jose": "^5.9.6",
+		"nodemailer": "^6.9.16",
+		"pg": "^8.16.3",
+		"reflect-metadata": "^0.2.2",
+		"rxjs": "^7.8.1",
+		"ws": "^8.18.0",
+		"zod": "^3.24.1"
+	},
+	"devDependencies": {
+		"@aws-sdk/client-dynamodb": "^3.1136.0",
+		"@aws-sdk/lib-dynamodb": "^3.1136.0",
+		"@biomejs/biome": "^2.3.8",
+		"@nestjs/cli": "^11.0.0",
+		"@nestjs/schematics": "^11.0.0",
+		"@types/express": "^5.0.6",
+		"@types/node": "^22.10.5",
+		"@types/nodemailer": "^6.4.17",
+		"@types/pg": "^8.11.10",
+		"@types/ws": "^8.5.13",
+		"drizzle-kit": "^0.31.8",
+		"tsx": "^4.21.0",
+		"typescript": "^5.7.3",
+		"vitest": "^2.1.8"
+	},
+	"pnpm": {
+		"onlyBuiltDependencies": [
+			"esbuild",
+			"msgpackr-extract"
+		]
+	}
+}
