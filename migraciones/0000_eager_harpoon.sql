@@ -217,10 +217,21 @@ CREATE TABLE "plantilla_de_compra_partidas" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"plantilla_id" text NOT NULL,
 	"producto_id" uuid NOT NULL,
-	"diseno_id" uuid,
+	"arte_id" text,
+	"lados" jsonb DEFAULT '[]'::jsonb NOT NULL,
+	"origen_pedido_id" uuid,
+	"origen_partida_id" uuid,
+	"miniatura" text,
 	"color" text,
-	"talla" text,
-	"piezas" integer DEFAULT 1 NOT NULL
+	"nombre" text,
+	"orden" integer DEFAULT 0 NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "plantilla_de_compra_tallas" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"partida_id" uuid NOT NULL,
+	"talla" text NOT NULL,
+	"piezas" integer NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "plantillas_de_compra" (
@@ -401,7 +412,9 @@ ALTER TABLE "favoritos" ADD CONSTRAINT "favoritos_producto_id_productos_id_fk" F
 ALTER TABLE "imagenes_de_comprador" ADD CONSTRAINT "imagenes_de_comprador_comprador_id_compradores_id_fk" FOREIGN KEY ("comprador_id") REFERENCES "public"."compradores"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "plantilla_de_compra_partidas" ADD CONSTRAINT "plantilla_de_compra_partidas_plantilla_id_plantillas_de_compra_id_fk" FOREIGN KEY ("plantilla_id") REFERENCES "public"."plantillas_de_compra"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "plantilla_de_compra_partidas" ADD CONSTRAINT "plantilla_de_compra_partidas_producto_id_productos_id_fk" FOREIGN KEY ("producto_id") REFERENCES "public"."productos"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "plantilla_de_compra_partidas" ADD CONSTRAINT "plantilla_de_compra_partidas_diseno_id_disenos_id_fk" FOREIGN KEY ("diseno_id") REFERENCES "public"."disenos"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "plantilla_de_compra_partidas" ADD CONSTRAINT "plantilla_de_compra_partidas_origen_pedido_id_pedidos_id_fk" FOREIGN KEY ("origen_pedido_id") REFERENCES "public"."pedidos"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "plantilla_de_compra_partidas" ADD CONSTRAINT "plantilla_de_compra_partidas_origen_partida_id_pedido_partidas_id_fk" FOREIGN KEY ("origen_partida_id") REFERENCES "public"."pedido_partidas"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "plantilla_de_compra_tallas" ADD CONSTRAINT "plantilla_de_compra_tallas_partida_id_plantilla_de_compra_partidas_id_fk" FOREIGN KEY ("partida_id") REFERENCES "public"."plantilla_de_compra_partidas"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "plantillas_de_compra" ADD CONSTRAINT "plantillas_de_compra_comprador_id_compradores_id_fk" FOREIGN KEY ("comprador_id") REFERENCES "public"."compradores"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "paquete_categorias" ADD CONSTRAINT "paquete_categorias_paquete_id_paquetes_id_fk" FOREIGN KEY ("paquete_id") REFERENCES "public"."paquetes"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "paquete_categorias" ADD CONSTRAINT "paquete_categorias_categoria_id_categorias_id_fk" FOREIGN KEY ("categoria_id") REFERENCES "public"."categorias"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -435,7 +448,8 @@ CREATE INDEX "evento_productos_evento" ON "evento_productos" USING btree ("event
 CREATE UNIQUE INDEX "eventos_codigo_unico" ON "eventos" USING btree ("codigo");--> statement-breakpoint
 CREATE INDEX "eventos_comprador" ON "eventos" USING btree ("comprador_id","creado_en");--> statement-breakpoint
 CREATE INDEX "imagenes_de_comprador_comprador" ON "imagenes_de_comprador" USING btree ("comprador_id","creado_en");--> statement-breakpoint
-CREATE INDEX "plantilla_de_compra_partidas_plantilla" ON "plantilla_de_compra_partidas" USING btree ("plantilla_id");--> statement-breakpoint
+CREATE INDEX "plantilla_de_compra_partidas_plantilla" ON "plantilla_de_compra_partidas" USING btree ("plantilla_id","orden");--> statement-breakpoint
+CREATE UNIQUE INDEX "plantilla_de_compra_tallas_unico" ON "plantilla_de_compra_tallas" USING btree ("partida_id","talla");--> statement-breakpoint
 CREATE INDEX "plantillas_de_compra_comprador" ON "plantillas_de_compra" USING btree ("comprador_id","creado_en");--> statement-breakpoint
 CREATE INDEX "paquete_categorias_categoria" ON "paquete_categorias" USING btree ("categoria_id");--> statement-breakpoint
 CREATE INDEX "paquete_productos_paquete" ON "paquete_productos" USING btree ("paquete_id","orden");--> statement-breakpoint

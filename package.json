@@ -16,7 +16,8 @@
 		"probar:pedidos": "tsc -p tsconfig.scripts.json && node --env-file=.env dist-scripts/scripts/probar-pedidos.js",
 		"probar:envios": "tsc -p tsconfig.scripts.json && node --env-file=.env dist-scripts/scripts/probar-envios-cuenta.js",
 		"probar:admin": "tsc -p tsconfig.scripts.json && node --env-file=.env dist-scripts/scripts/probar-admin.js",
-		"probar:taller": "tsc -p tsconfig.scripts.json && node --env-file=.env dist-scripts/scripts/probar-taller.js"
+		"probar:taller": "tsc -p tsconfig.scripts.json && node --env-file=.env dist-scripts/scripts/probar-taller.js",
+		"probar:plantillas": "tsc -p tsconfig.scripts.json && node --env-file=.env dist-scripts/scripts/probar-plantillas.js"
 	},
 	"dependencies": {
 		"@aws-sdk/client-cognito-identity-provider": "^3.1136.0",

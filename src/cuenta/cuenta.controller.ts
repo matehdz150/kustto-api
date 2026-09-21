@@ -16,6 +16,7 @@ import { DisenosService } from "./disenos.service";
 import { FavoritosService } from "./favoritos.service";
 import { ImagenesService } from "./imagenes.service";
 import { PerfilService } from "./perfil.service";
+import { PlantillasDeCompraService } from "./plantillas.service";
 
 function quien(peticion: PeticionConIdentidad): Identidad {
 	return peticion.identidad!;
@@ -36,6 +37,7 @@ export class CuentaController {
 		private readonly favoritos: FavoritosService,
 		private readonly disenos: DisenosService,
 		private readonly imagenes: ImagenesService,
+		private readonly plantillas: PlantillasDeCompraService,
 	) {}
 
 	/* ─── Perfil ──────────────────────────────────────────────────────────── */
@@ -125,5 +127,52 @@ export class CuentaController {
 	@Delete("imagenes/:id")
 	borrarImagen(@Req() p: PeticionConIdentidad, @Param("id") id: string) {
 		return this.imagenes.borrar(quien(p), id);
+	}
+
+	/* ─── Plantillas de compra ────────────────────────────────────────────
+	   El id es ordenable por tiempo (`20260904T022617-41ec85d4`), no un uuid:
+	   ver el comentario de la tabla. Por eso no lleva `ParseUUIDPipe`. */
+
+	@Get("plantillas")
+	listarPlantillas(@Req() p: PeticionConIdentidad) {
+		return this.plantillas.listar(quien(p));
+	}
+
+	@Post("plantillas")
+	crearPlantilla(@Req() p: PeticionConIdentidad, @Body() c: Record<string, unknown>) {
+		return this.plantillas.crear(quien(p), c);
+	}
+
+	/**
+	 * `subidas` va antes que las rutas con `:id`.
+	 *
+	 * HOY NO CHOCARÍA —no hay ningún `POST plantillas/:id`, y las demás son
+	 * PATCH y DELETE— pero Nest resuelve por orden de declaración, así que el
+	 * día que alguien añada uno, `plantillas/subidas` entraría por ahí con
+	 * `id = "subidas"` y sólo se notaría cuando alguien subiera arte. Dejarla
+	 * arriba cuesta nada.
+	 */
+	@Post("plantillas/subidas")
+	firmarSubidas(@Req() p: PeticionConIdentidad, @Body() c: Record<string, unknown>) {
+		return this.plantillas.firmarSubidas(quien(p), c);
+	}
+
+	@Post("plantillas/:id/carrito")
+	plantillaAlCarrito(@Req() p: PeticionConIdentidad, @Param("id") id: string) {
+		return this.plantillas.alCarrito(quien(p), id);
+	}
+
+	@Patch("plantillas/:id")
+	actualizarPlantilla(
+		@Req() p: PeticionConIdentidad,
+		@Param("id") id: string,
+		@Body() c: Record<string, unknown>,
+	) {
+		return this.plantillas.actualizar(quien(p), id, c);
+	}
+
+	@Delete("plantillas/:id")
+	borrarPlantilla(@Req() p: PeticionConIdentidad, @Param("id") id: string) {
+		return this.plantillas.borrar(quien(p), id);
 	}
 }

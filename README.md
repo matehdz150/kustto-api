@@ -223,6 +223,33 @@ quién estaba conectado. Con un servidor, la conexión **es** el estado. Lo que
 sí hace falta es Redis: con varias instancias, la que atiende el checkout casi
 nunca es la que tiene abierta la conexión del taller.
 
+## Plantillas de compra
+
+La receta de un pedido que se repite: *"este kit de bienvenida, estos
+productos, estas cantidades"*. **No es lo mismo que repetir un pedido** —aquél
+clona uno pasado tal cual; una plantilla guarda su propia receta de tallas, que
+es justo lo que se ajusta entre una vez y otra.
+
+**De dónde sale el arte** es la decisión de fondo, y hay dos caminos:
+
+- `arte_id` — el arte propio de la plantilla, en
+  `medios/plantillas/<comprador>/`, que **no caduca**. Manda sobre el otro: es
+  el que se hizo para esta receta.
+- `origen_pedido_id` + `origen_partida_id` — la línea de pedido de donde salió.
+
+**No apunta a un diseño guardado**, aunque lo parezca: un diseño guardado copia
+el lienzo editable y una miniatura, **no el arte de producción**. Por eso un
+diseño guardado abre el editor en vez de ir al carrito. Y tampoco puede apuntar
+al carrito: `carritos/` caduca a los 30 días.
+
+Los dos en nulo es válido: *"esta playera, estas tallas"*, sin arte todavía —
+al cargarla, ese producto pasa por el editor.
+
+Cargar una plantilla devuelve **tres listas**, porque hay tres desenlaces:
+`articulos` (listos), `porDisenar` (el producto vive pero no hay arte que
+copiar) y `perdidos` (ya no se publica). El último es el único que **obliga a
+decidir**: meterlo al carrito sólo movería el fallo al final del checkout.
+
 ## Probarlo
 
 ```bash
@@ -230,7 +257,12 @@ pnpm probar:pedidos    # el ciclo del pedido: transiciones, cancelación, carrer
 pnpm probar:envios     # limitador, cotización guardada, webhook, carrito, cuenta
 pnpm probar:admin      # plantillas, categorías, revisión, paquetes y subidas
 pnpm probar:taller     # productos, existencias, perfil y el canal en vivo
+pnpm probar:plantillas # la receta, el arte propio y la vuelta al carrito
 ```
+
+`probar:plantillas` **toca S3 de verdad**: firma una subida, sube un PNG
+diminuto, comprueba que la copia al carrito llegó y borra lo que subió. Es la
+única forma de verificar la copia de servidor a servidor.
 
 Corren contra la base de `docker compose` y por el código real, no por HTTP:
 así se prueba la lógica sin tener que conseguir un token de Cognito.
@@ -248,5 +280,6 @@ recotización y el webhook de rastreo), los **correos** del pedido, el
 Portado también: **el backoffice entero**, **el panel del taller** —sus
 productos, sus existencias y su perfil— y **el canal en vivo**.
 
-Pendiente: las **plantillas de compra** de `/cuenta`, los **eventos** y el
-**worker de bordado**.
+Portado también: las **plantillas de compra**.
+
+Pendiente: los **eventos** y el **worker de bordado**.

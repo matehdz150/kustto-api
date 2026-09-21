@@ -5,6 +5,7 @@ import { DisenosService } from "./disenos.service";
 import { FavoritosService } from "./favoritos.service";
 import { ImagenesService } from "./imagenes.service";
 import { PerfilService } from "./perfil.service";
+import { PlantillasDeCompraService } from "./plantillas.service";
 
 @Module({
 	controllers: [CuentaController],
@@ -14,6 +15,7 @@ import { PerfilService } from "./perfil.service";
 		FavoritosService,
 		DisenosService,
 		ImagenesService,
+		PlantillasDeCompraService,
 	],
 	exports: [PerfilService, CarritoService],
 })

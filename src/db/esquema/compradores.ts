@@ -12,6 +12,7 @@ import {
 	uuid,
 } from "drizzle-orm/pg-core";
 import { productos } from "./catalogo";
+import { pedidoPartidas, pedidos } from "./pedidos";
 import { estadoEvento, marcas } from "./comun";
 
 /**
@@ -179,6 +180,33 @@ export const plantillasDeCompra = pgTable(
 	(t) => [index("plantillas_de_compra_comprador").on(t.compradorId, t.creadoEn)],
 );
 
+/**
+ * Un producto dentro de una plantilla, con DE DÓNDE SALE SU ARTE.
+ *
+ * NO APUNTA A UN DISEÑO GUARDADO, y aquí estaba el error: lo modelé así y es
+ * exactamente lo que la lógica original descarta por escrito. Un diseño
+ * guardado copia el LIENZO EDITABLE y una miniatura de colocación, **no el
+ * arte de producción** — por eso un diseño guardado abre el editor en vez de
+ * ir al carrito, hay que re-exportarlo. Con un `diseno_id` aquí, cargar una
+ * plantilla habría encontrado una referencia válida y ningún archivo que
+ * imprimir.
+ *
+ * TAMPOCO PUEDE APUNTAR AL CARRITO: `carritos/` caduca a los 30 días, así que
+ * una plantilla armada con eso se quedaría muda al mes.
+ *
+ * Lo que sí es duradero Y pedible son dos cosas, y por eso hay dos caminos:
+ *
+ *   - `arte_id`, el arte PROPIO de la plantilla, subido al armarla. Vive en
+ *     `medios/plantillas/<comprador>/<arte_id>/` y no caduca. Manda sobre el
+ *     otro: es el que se hizo para esta receta.
+ *   - `origen_pedido_id` + `origen_partida_id`, la línea de pedido de donde
+ *     salió. `medios/pedidos/<pedido>/<partida>-<lado>.png` dura y se puede
+ *     mandar a máquina.
+ *
+ * LOS DOS EN NULO ES VÁLIDO Y NORMAL: "esta playera, estas tallas", sin arte
+ * todavía. Es lo que permite armar una plantilla desde el catálogo antes de
+ * haber pedido nunca; al cargarla, ese producto pasa por el editor.
+ */
 export const plantillaDeCompraPartidas = pgTable(
 	"plantilla_de_compra_partidas",
 	{
@@ -189,15 +217,64 @@ export const plantillaDeCompraPartidas = pgTable(
 		productoId: uuid("producto_id")
 			.notNull()
 			.references(() => productos.id, { onDelete: "cascade" }),
-		/** Apunta al diseño guardado; no copia el arte. Ver el comentario de arriba. */
-		disenoId: uuid("diseno_id").references(() => disenos.id, {
+		/** El arte propio, si se diseñó desde la plantilla. Ver arriba. */
+		arteId: text("arte_id"),
+		/**
+		 * Los lados de ese arte propio, con sus PÍXELES.
+		 *
+		 * Píxeles y no centímetros: el área imprimible se relee del producto al
+		 * pedir —el taller puede haberla cambiado— pero el tamaño real de lo que
+		 * se estampa sale de cuántos píxeles tiene el archivo, y ése es el de
+		 * cuando se subió.
+		 */
+		lados: jsonb().notNull().default([]),
+		/** De qué línea de qué pedido sale el arte, si no hay propio. */
+		origenPedidoId: uuid("origen_pedido_id").references(() => pedidos.id, {
 			onDelete: "set null",
 		}),
-		color: text(),
-		talla: text(),
-		piezas: integer().notNull().default(1),
+		origenPartidaId: uuid("origen_partida_id").references(
+			() => pedidoPartidas.id,
+			{ onDelete: "set null" },
+		),
+		/** Para reconocerla en la lista sin ir a buscar el archivo. */
+		miniatura: text(),
+		color: text("color"),
+		/**
+		 * El nombre del producto, congelado.
+		 *
+		 * SÓLO PARA RECONOCERLO EN LA LISTA. Si el taller se lo cambia, aquí
+		 * queda el viejo y no pasa nada: lo que se cobra sale del producto, no de
+		 * aquí.
+		 */
+		nombre: text(),
+		orden: integer().notNull().default(0),
 	},
-	(t) => [index("plantilla_de_compra_partidas_plantilla").on(t.plantillaId)],
+	(t) => [
+		index("plantilla_de_compra_partidas_plantilla").on(t.plantillaId, t.orden),
+	],
+);
+
+/**
+ * Cuántas piezas de cada talla lleva un producto de la plantilla.
+ *
+ * ES LA DIFERENCIA ENTRE REPETIR Y CARGAR UNA PLANTILLA: repetir clona el
+ * pedido tal cual; una plantilla guarda su propia receta de tallas, que es
+ * justo lo que se ajusta entre una vez y otra —el mismo kit de bienvenida, dos
+ * tallas distintas según quién entre—.
+ */
+export const plantillaDeCompraTallas = pgTable(
+	"plantilla_de_compra_tallas",
+	{
+		id: uuid().primaryKey().defaultRandom(),
+		partidaId: uuid("partida_id")
+			.notNull()
+			.references(() => plantillaDeCompraPartidas.id, { onDelete: "cascade" }),
+		talla: text().notNull(),
+		piezas: integer().notNull(),
+	},
+	(t) => [
+		uniqueIndex("plantilla_de_compra_tallas_unico").on(t.partidaId, t.talla),
+	],
 );
 
 /**

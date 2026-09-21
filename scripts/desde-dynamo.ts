@@ -656,20 +656,66 @@ async function principal() {
 				.delete(e.plantillaDeCompraPartidas)
 				.where(eq(e.plantillaDeCompraPartidas.plantillaId, it.id));
 
-			for (const linea of it.items ?? []) {
-				await db
+			for (const [orden, linea] of (it.items ?? []).entries()) {
+				const productoId = opcional(linea.productoId);
+				if (!productoId) continue;
+
+				/* El origen son claves foráneas: si el pedido o la partida ya no
+				   están, se guarda el ítem SIN origen —pasará por el editor al
+				   cargarla— en vez de perder la plantilla entera.
+				
+				   Se comprueba que el id NO ESTÉ VACÍO antes de preguntar: un ítem
+				   sin origen es lo normal, y `where id = ''` no devuelve cero filas
+				   sino que revienta, porque la columna es uuid. */
+				const origenPedido = opcional(linea.origen?.pedidoId);
+				const origenLinea = opcional(linea.origen?.lineaId);
+
+				const [pedido] = origenPedido
+					? await db
+							.select({ id: e.pedidos.id })
+							.from(e.pedidos)
+							.where(eq(e.pedidos.id, origenPedido))
+					: [];
+
+				const [partida] = pedido && origenLinea
+					? await db
+							.select({ id: e.pedidoPartidas.id })
+							.from(e.pedidoPartidas)
+							.where(eq(e.pedidoPartidas.id, origenLinea))
+					: [];
+
+				const [creada] = await db
 					.insert(e.plantillaDeCompraPartidas)
 					.values({
 						plantillaId: it.id,
-						productoId: linea.productoId ?? linea.productId,
-						/* La plantilla APUNTA al diseño guardado, no copia el arte: el
-						   del carrito caduca a los 30 días y éste tiene que durar años. */
-						disenoId: opcional(linea.disenoId),
-						color: opcional(linea.color),
-						talla: opcional(linea.talla ?? linea.size),
-						piezas: Number(linea.piezas ?? linea.cantidad ?? 1),
+						productoId,
+						/* `itemId` es el arte PROPIO de la plantilla, no un diseño
+						   guardado: ver el comentario de la tabla. */
+						arteId: opcional(linea.itemId),
+						lados: linea.lados ?? [],
+						origenPedidoId: pedido?.id ?? null,
+						origenPartidaId: partida?.id ?? null,
+						miniatura: opcional(linea.miniatura),
+						color: opcional(linea.colorPrenda),
+						nombre: opcional(linea.nombre),
+						orden,
 					})
-					.onConflictDoNothing();
+					.returning({ id: e.plantillaDeCompraPartidas.id });
+
+				anotar("plantilla_partidas", 1);
+
+				for (const t of linea.tallas ?? []) {
+					if (!t?.size || !(Number(t.piezas) > 0)) continue;
+					await db
+						.insert(e.plantillaDeCompraTallas)
+						.values({
+							partidaId: creada.id,
+							talla: String(t.size),
+							piezas: Number(t.piezas),
+						})
+						.onConflictDoNothing();
+					anotar("plantilla_tallas", 1);
+				}
 			}
 		}
 
