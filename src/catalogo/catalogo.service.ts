@@ -1,8 +1,8 @@
 import { Inject, Injectable, NotFoundException } from "@nestjs/common";
 import { and, asc, desc, eq, inArray } from "drizzle-orm";
+import { aSalida } from "../admin/categorias.service";
 import { DB, type Db } from "../db/db.module";
 import * as e from "../db/esquema";
-import { aSalida } from "../admin/categorias.service";
 
 /**
  * La forma que espera el catálogo del front, INTACTA.
@@ -67,7 +67,10 @@ export class CatalogoService {
 			// Lo último aprobado primero: es lo que se ve arriba del catálogo.
 			.orderBy(desc(e.productos.actualizadoEn));
 
-		return this.componer(filas.map((f) => f.id), filas);
+		return this.componer(
+			filas.map((f) => f.id),
+			filas,
+		);
 	}
 
 	/**
@@ -195,48 +198,55 @@ export class CatalogoService {
 	): Promise<Ficha[]> {
 		if (ids.length === 0) return [];
 
-		const [imagenes, colores, tallas, lados, precios, produccion, categorias, talleres] =
-			await Promise.all([
-				this.db
-					.select()
-					.from(e.productoImagenes)
-					.where(inArray(e.productoImagenes.productoId, ids))
-					.orderBy(asc(e.productoImagenes.orden)),
-				this.db
-					.select()
-					.from(e.productoColores)
-					.where(inArray(e.productoColores.productoId, ids)),
-				this.db
-					.select()
-					.from(e.productoTallas)
-					.where(inArray(e.productoTallas.productoId, ids))
-					.orderBy(asc(e.productoTallas.orden)),
-				this.db
-					.select()
-					.from(e.productoLados)
-					.where(inArray(e.productoLados.productoId, ids)),
-				this.db
-					.select()
-					.from(e.productoPrecios)
-					.where(inArray(e.productoPrecios.productoId, ids)),
-				this.db
-					.select()
-					.from(e.productoProduccion)
-					.where(inArray(e.productoProduccion.productoId, ids)),
-				this.db
-					.select()
-					.from(e.productoCategorias)
-					.where(inArray(e.productoCategorias.productoId, ids)),
-				this.db
-					.select({ id: e.talleres.id, nombre: e.talleres.nombre })
-					.from(e.talleres)
-					.where(
-						inArray(
-							e.talleres.id,
-							[...new Set(productos.map((p) => p.tallerId))],
-						),
-					),
-			]);
+		const [
+			imagenes,
+			colores,
+			tallas,
+			lados,
+			precios,
+			produccion,
+			categorias,
+			talleres,
+		] = await Promise.all([
+			this.db
+				.select()
+				.from(e.productoImagenes)
+				.where(inArray(e.productoImagenes.productoId, ids))
+				.orderBy(asc(e.productoImagenes.orden)),
+			this.db
+				.select()
+				.from(e.productoColores)
+				.where(inArray(e.productoColores.productoId, ids)),
+			this.db
+				.select()
+				.from(e.productoTallas)
+				.where(inArray(e.productoTallas.productoId, ids))
+				.orderBy(asc(e.productoTallas.orden)),
+			this.db
+				.select()
+				.from(e.productoLados)
+				.where(inArray(e.productoLados.productoId, ids)),
+			this.db
+				.select()
+				.from(e.productoPrecios)
+				.where(inArray(e.productoPrecios.productoId, ids)),
+			this.db
+				.select()
+				.from(e.productoProduccion)
+				.where(inArray(e.productoProduccion.productoId, ids)),
+			this.db
+				.select()
+				.from(e.productoCategorias)
+				.where(inArray(e.productoCategorias.productoId, ids)),
+			this.db
+				.select({ id: e.talleres.id, nombre: e.talleres.nombre })
+				.from(e.talleres)
+				.where(
+					inArray(e.talleres.id, [
+						...new Set(productos.map((p) => p.tallerId)),
+					]),
+				),
+		]);
 
 		const porProducto = <T extends { productoId: string }>(filas: T[]) => {
 			const mapa = new Map<string, T[]>();

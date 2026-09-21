@@ -26,15 +26,19 @@ export class CategoriasService {
 		const nombre = String(cuerpo.name ?? "").trim();
 		const imagen = String(cuerpo.image ?? "").trim();
 
-		if (!nombre) throw new BadRequestException("Falta el nombre de la categoría");
+		if (!nombre)
+			throw new BadRequestException("Falta el nombre de la categoría");
 		/* La imagen no es opcional: es lo que se ve en el chip del catálogo. */
-		if (!imagen) throw new BadRequestException("Falta la imagen de la categoría");
+		if (!imagen)
+			throw new BadRequestException("Falta la imagen de la categoría");
 
 		const [fila] = await this.db
 			.insert(e.categorias)
 			.values({
 				nombre,
-				descripcion: cuerpo.description ? String(cuerpo.description).trim() : null,
+				descripcion: cuerpo.description
+					? String(cuerpo.description).trim()
+					: null,
 				imagenUrl: imagen,
 				slug: await this.slugLibre(nombre),
 			})

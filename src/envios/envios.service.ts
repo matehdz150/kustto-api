@@ -33,7 +33,10 @@ export type EnvioElegido = {
 	diasEstimados: number | null;
 };
 
-type LineaPedida = { productoId: string; tallas: { size: string; piezas: number }[] };
+type LineaPedida = {
+	productoId: string;
+	tallas: { size: string; piezas: number }[];
+};
 
 /**
  * Cotizar envíos.
@@ -129,7 +132,12 @@ export class EnviosService {
 				partes.push({
 					proveedorId: tallerId,
 					taller,
-					cotizacionId: await this.arrancar(tallerId, destino, suyas, productos),
+					cotizacionId: await this.arrancar(
+						tallerId,
+						destino,
+						suyas,
+						productos,
+					),
 				});
 			} catch (error) {
 				/* Pasarse del límite SÍ tumba la compra entera, porque reintentar
@@ -228,7 +236,8 @@ export class EnviosService {
 			)
 			.limit(1);
 
-		const tarifas = (cotizacion?.respuesta as { tarifas?: Tarifa[] } | null)?.tarifas;
+		const tarifas = (cotizacion?.respuesta as { tarifas?: Tarifa[] } | null)
+			?.tarifas;
 		const tarifa = tarifas?.find((t) => t.id === tarifaId);
 
 		/* Cobrar un precio que ya no existe es peor que pedir un clic más. */
@@ -315,10 +324,12 @@ export class EnviosService {
 				throw new BadRequestException("Una línea no dice qué producto es");
 			}
 
-			const tallas = (Array.isArray(l?.tallas) ? l.tallas : []).map((t: any) => ({
-				size: String(t?.size ?? ""),
-				piezas: Math.trunc(Number(t?.piezas ?? 0)),
-			}));
+			const tallas = (Array.isArray(l?.tallas) ? l.tallas : []).map(
+				(t: any) => ({
+					size: String(t?.size ?? ""),
+					piezas: Math.trunc(Number(t?.piezas ?? 0)),
+				}),
+			);
 
 			if (tallas.length === 0) {
 				throw new BadRequestException(
@@ -341,7 +352,9 @@ export class EnviosService {
 				caja: e.productos.caja,
 			})
 			.from(e.productos)
-			.where(and(inArray(e.productos.id, ids), eq(e.productos.estado, "activo")));
+			.where(
+				and(inArray(e.productos.id, ids), eq(e.productos.estado, "activo")),
+			);
 
 		if (filas.length !== ids.length) {
 			throw new NotFoundException("Ese producto no está disponible");
@@ -357,7 +370,11 @@ export class EnviosService {
 				p.id,
 				{
 					tallerId: p.tallerId,
-					caja: p.caja as { largo?: number; ancho?: number; alto?: number } | null,
+					caja: p.caja as {
+						largo?: number;
+						ancho?: number;
+						alto?: number;
+					} | null,
 					pesoPorTalla: new Map(
 						pesos
 							.filter((t) => t.productoId === p.id)

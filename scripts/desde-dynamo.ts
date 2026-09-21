@@ -114,7 +114,10 @@ function aSlug(texto: string) {
  * La llave de una variante dentro del mapa `existencias`: `"Negro|M"` o `"M"`.
  * Espejo de `variante()` en las Lambdas; si aquello cambia, esto también.
  */
-function partirVariante(llave: string): { color: string | null; talla: string } {
+function partirVariante(llave: string): {
+	color: string | null;
+	talla: string;
+} {
 	const partes = llave.split("|");
 	return partes.length > 1
 		? { color: partes[0], talla: partes.slice(1).join("|") }
@@ -336,7 +339,12 @@ async function principal() {
 				const { color, talla } = partirVariante(llave);
 				await db
 					.insert(e.productoExistencias)
-					.values({ productoId: it.id, color, talla, cantidad: Number(cantidad) })
+					.values({
+						productoId: it.id,
+						color,
+						talla,
+						cantidad: Number(cantidad),
+					})
 					.onConflictDoNothing();
 			}
 
@@ -367,8 +375,9 @@ async function principal() {
 				.values({
 					id: it.id,
 					folio: it.folio,
-					correo: String(it.comprador?.email ?? it.comprador?.correo ?? "")
-						.toLowerCase(),
+					correo: String(
+						it.comprador?.email ?? it.comprador?.correo ?? "",
+					).toLowerCase(),
 					nombre: opcional(it.comprador?.nombre ?? it.comprador?.name),
 					whatsapp: opcional(it.comprador?.whatsapp ?? it.comprador?.telefono),
 					piezas: Number(it.piezas ?? 0),
@@ -479,7 +488,9 @@ async function principal() {
 						size: String(t.size ?? ""),
 						piezas: Number(t.piezas ?? 0),
 					}))
-					.filter((t: { size: string; piezas: number }) => t.size && t.piezas > 0);
+					.filter(
+						(t: { size: string; piezas: number }) => t.size && t.piezas > 0,
+					);
 
 				const piezas =
 					Number(l.piezas ?? 0) || tallas.reduce((n, t) => n + t.piezas, 0);
@@ -677,12 +688,13 @@ async function principal() {
 							.where(eq(e.pedidos.id, origenPedido))
 					: [];
 
-				const [partida] = pedido && origenLinea
-					? await db
-							.select({ id: e.pedidoPartidas.id })
-							.from(e.pedidoPartidas)
-							.where(eq(e.pedidoPartidas.id, origenLinea))
-					: [];
+				const [partida] =
+					pedido && origenLinea
+						? await db
+								.select({ id: e.pedidoPartidas.id })
+								.from(e.pedidoPartidas)
+								.where(eq(e.pedidoPartidas.id, origenLinea))
+						: [];
 
 				const [creada] = await db
 					.insert(e.plantillaDeCompraPartidas)
@@ -827,7 +839,9 @@ async function principal() {
 
 		console.table(cuenta);
 		console.log("\nLo que NO se trajo, a propósito: los ítems LOCK de slug,");
-		console.log("folio, correo de taller y código de evento — ahora son UNIQUE.");
+		console.log(
+			"folio, correo de taller y código de evento — ahora son UNIQUE.",
+		);
 	} finally {
 		await pool.end();
 	}

@@ -1,7 +1,12 @@
 import { randomUUID } from "node:crypto";
 import type { AlmacenService } from "../almacen/almacen.service";
 
-type Arte = { lado?: unknown; anchoPx?: unknown; altoPx?: unknown; dpi?: unknown };
+type Arte = {
+	lado?: unknown;
+	anchoPx?: unknown;
+	altoPx?: unknown;
+	dpi?: unknown;
+};
 
 /**
  * Copia el arte de una línea de pedido a `carritos/<nuevo>/`.

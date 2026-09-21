@@ -62,20 +62,24 @@ export class PaquetesService {
 		const nombre = String(cuerpo.name ?? "").trim();
 		if (!nombre) throw new BadRequestException("Falta el nombre del paquete");
 
-		return this.db.transaction(async (tx) => {
-			const [paquete] = await tx
-				.insert(e.paquetes)
-				.values({
-					nombre,
-					descripcion: cuerpo.description ? String(cuerpo.description).trim() : null,
-					imagenUrl: cuerpo.image ? String(cuerpo.image).trim() : null,
-					estado: leerEstado(cuerpo.status),
-				})
-				.returning();
+		return this.db
+			.transaction(async (tx) => {
+				const [paquete] = await tx
+					.insert(e.paquetes)
+					.values({
+						nombre,
+						descripcion: cuerpo.description
+							? String(cuerpo.description).trim()
+							: null,
+						imagenUrl: cuerpo.image ? String(cuerpo.image).trim() : null,
+						estado: leerEstado(cuerpo.status),
+					})
+					.returning();
 
-			await this.escribirPiezas(tx, paquete.id, cuerpo);
-			return paquete.id;
-		}).then((id) => this.obtener(id));
+				await this.escribirPiezas(tx, paquete.id, cuerpo);
+				return paquete.id;
+			})
+			.then((id) => this.obtener(id));
 	}
 
 	async actualizar(id: string, cuerpo: Record<string, any>) {
@@ -99,7 +103,8 @@ export class PaquetesService {
 			if (cuerpo.image !== undefined) {
 				cambios.imagenUrl = cuerpo.image ? String(cuerpo.image).trim() : null;
 			}
-			if (cuerpo.status !== undefined) cambios.estado = leerEstado(cuerpo.status);
+			if (cuerpo.status !== undefined)
+				cambios.estado = leerEstado(cuerpo.status);
 
 			await tx.update(e.paquetes).set(cambios).where(eq(e.paquetes.id, id));
 			await this.escribirPiezas(tx, id, cuerpo);
@@ -203,7 +208,10 @@ export class PaquetesService {
 					precioBase: e.productoPrecios.precioBase,
 				})
 				.from(e.paqueteProductos)
-				.leftJoin(e.productos, eq(e.productos.id, e.paqueteProductos.productoId))
+				.leftJoin(
+					e.productos,
+					eq(e.productos.id, e.paqueteProductos.productoId),
+				)
 				.leftJoin(
 					e.productoPrecios,
 					eq(e.productoPrecios.productoId, e.paqueteProductos.productoId),

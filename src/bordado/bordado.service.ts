@@ -6,20 +6,20 @@ import {
 	NotFoundException,
 } from "@nestjs/common";
 import type { Queue } from "bullmq";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { AlmacenService } from "../almacen/almacen.service";
 import type { Identidad } from "../auth/cognito";
 import { COLAS } from "../colas/colas";
 import { COLA } from "../colas/colas.module";
 import { ENTORNO } from "../config/config.module";
-import { PerfilService } from "../cuenta/perfil.service";
 import type { Entorno } from "../config/entorno";
+import { PerfilService } from "../cuenta/perfil.service";
 import { DB, type Db } from "../db/db.module";
 import * as e from "../db/esquema";
 import {
+	canonicalJson,
 	EMBROIDERY_PROFILE_V2,
 	type EmbroideryDesign,
-	canonicalJson,
 	embroideryDesignHash,
 	embroideryJobId,
 	validateDesign,
@@ -74,7 +74,8 @@ export class BordadoService {
 			.where(eq(e.trabajosDeBordado.id, jobId))
 			.limit(1);
 
-		if (existente) return this.yaExistia(quien, existente, cuerpo?.retry === true);
+		if (existente)
+			return this.yaExistia(quien, existente, cuerpo?.retry === true);
 
 		/* La fila del comprador tiene que existir antes: el trabajo tiene una
 		   clave foránea hacia ella, y preparar un bordado es de las primeras

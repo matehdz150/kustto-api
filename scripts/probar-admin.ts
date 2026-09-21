@@ -6,23 +6,29 @@
  */
 import { NestFactory } from "@nestjs/core";
 import { eq } from "drizzle-orm";
-import { AppModule } from "../src/app.module";
 import { CategoriasService } from "../src/admin/categorias.service";
 import { PaquetesService } from "../src/admin/paquetes.service";
 import { PlantillasService } from "../src/admin/plantillas.service";
 import { RevisionService } from "../src/admin/revision.service";
 import { SubidasService } from "../src/admin/subidas.service";
+import { AppModule } from "../src/app.module";
 import { DB, type Db } from "../src/db/db.module";
 import * as e from "../src/db/esquema";
 
 let fallos = 0;
 
 function comprobar(que: string, bien: boolean, detalle = "") {
-	console.log(`  ${bien ? "ok  " : "FALLA"}  ${que}${detalle ? ` — ${detalle}` : ""}`);
+	console.log(
+		`  ${bien ? "ok  " : "FALLA"}  ${que}${detalle ? ` — ${detalle}` : ""}`,
+	);
 	if (!bien) fallos++;
 }
 
-async function falla(que: string, fn: () => Promise<unknown>, esperado: string) {
+async function falla(
+	que: string,
+	fn: () => Promise<unknown>,
+	esperado: string,
+) {
 	try {
 		await fn();
 		comprobar(que, false, "no lanzó");
@@ -57,8 +63,12 @@ async function principal() {
 			sideLabels: { front: "Delante", back: "Detrás" },
 			mockups: { front: "/mockups/x/f.png", back: "/mockups/x/b.png" },
 			editableAreas: {
-				front: [{ id: "f", type: "rect", left: 0, top: 0, width: 10, height: 10 }],
-				back: [{ id: "b", type: "rect", left: 0, top: 0, width: 10, height: 10 }],
+				front: [
+					{ id: "f", type: "rect", left: 0, top: 0, width: 10, height: 10 },
+				],
+				back: [
+					{ id: "b", type: "rect", left: 0, top: 0, width: 10, height: 10 },
+				],
 			},
 		},
 	};
@@ -109,7 +119,10 @@ async function principal() {
 			plantillas.crear({
 				...plana,
 				id: `prueba-sinarea-${sufijo}`,
-				data: { ...plana.data, editableAreas: { front: (plana.data.editableAreas as any).front } },
+				data: {
+					...plana.data,
+					editableAreas: { front: (plana.data.editableAreas as any).front },
+				},
 			}),
 		'"back" no tiene área',
 	);
@@ -165,17 +178,16 @@ async function principal() {
 		`${c1.slug} / ${c2.slug}`,
 	);
 
-	const renombrada = await categorias.actualizar(c1.id, { name: "Otro nombre" });
+	const renombrada = await categorias.actualizar(c1.id, {
+		name: "Otro nombre",
+	});
 	comprobar(
 		"renombrar NO cambia el slug (es parte de una URL compartida)",
 		renombrada.slug === c1.slug,
 		renombrada.slug,
 	);
 
-	const [conProductos] = await db
-		.select()
-		.from(e.productoCategorias)
-		.limit(1);
+	const [conProductos] = await db.select().from(e.productoCategorias).limit(1);
 
 	await falla(
 		"una categoría con productos dentro no se borra",
@@ -215,7 +227,11 @@ async function principal() {
 		Array.isArray((ficha as any).printSides) && (ficha as any).pricing !== null,
 		`${(ficha as any).printSides.length} lados, base $${(ficha as any).pricing?.basePrice}`,
 	);
-	comprobar("y el nombre del taller", Boolean(ficha.proveedor), String(ficha.proveedor));
+	comprobar(
+		"y el nombre del taller",
+		Boolean(ficha.proveedor),
+		String(ficha.proveedor),
+	);
 
 	await falla(
 		"rechazar sin decir por qué se rechaza",
@@ -264,13 +280,21 @@ async function principal() {
 		pricing: { basePrice: 1299.5, discountPercentage: 10 },
 	});
 
-	comprobar("se crea con sus piezas", paquete.items.length === 2, `${paquete.items.length}`);
+	comprobar(
+		"se crea con sus piezas",
+		paquete.items.length === 2,
+		`${paquete.items.length}`,
+	);
 	comprobar(
 		"el precio conserva los centavos (en el Nest viejo era entero)",
 		paquete.pricing?.basePrice === 1299.5,
 		`$${paquete.pricing?.basePrice}`,
 	);
-	comprobar("y el estado sale en inglés", paquete.status === "draft", paquete.status);
+	comprobar(
+		"y el estado sale en inglés",
+		paquete.status === "draft",
+		paquete.status,
+	);
 	comprobar(
 		"las piezas traen el nombre del producto",
 		Boolean(paquete.items[0].product?.name),
@@ -318,7 +342,8 @@ async function principal() {
 	});
 	comprobar(
 		"la ruta del mockup es relativa, nunca la de S3",
-		mockup.path.startsWith("/mockups/tshirt/front-") && !mockup.path.includes("amazonaws"),
+		mockup.path.startsWith("/mockups/tshirt/front-") &&
+			!mockup.path.includes("amazonaws"),
 		mockup.path,
 	);
 	comprobar(
@@ -328,13 +353,19 @@ async function principal() {
 
 	await falla(
 		"un tipo no soportado se rechaza",
-		() => subidas.urlParaMockup({ contentType: "application/pdf", templateId: "x", side: "y" }),
+		() =>
+			subidas.urlParaMockup({
+				contentType: "application/pdf",
+				templateId: "x",
+				side: "y",
+			}),
 		"Tipo no soportado",
 	);
 
 	await falla(
 		"una carpeta fuera de la lista blanca se rechaza",
-		() => subidas.urlParaImagen({ contentType: "image/png", carpeta: "mockups" }),
+		() =>
+			subidas.urlParaImagen({ contentType: "image/png", carpeta: "mockups" }),
 		"Carpeta no permitida",
 	);
 

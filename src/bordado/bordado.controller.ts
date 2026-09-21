@@ -1,4 +1,12 @@
-import { Body, Controller, Get, Param, Post, Req, UseGuards } from "@nestjs/common";
+import {
+	Body,
+	Controller,
+	Get,
+	Param,
+	Post,
+	Req,
+	UseGuards,
+} from "@nestjs/common";
 import { GuardComprador, type PeticionConIdentidad } from "../auth/auth.guard";
 import { BordadoService } from "./bordado.service";
 

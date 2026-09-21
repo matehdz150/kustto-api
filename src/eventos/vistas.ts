@@ -152,7 +152,9 @@ export async function instantaneasDe(db: Db, ids: string[]) {
 	for (const p of filas) {
 		if (p.estado !== "activo") continue;
 		const precio = precios.find((x) => x.productoId === p.id);
-		const suyas = tallas.filter((t) => t.productoId === p.id).map((t) => t.talla);
+		const suyas = tallas
+			.filter((t) => t.productoId === p.id)
+			.map((t) => t.talla);
 
 		resultado.set(p.id, {
 			nombre: p.nombre ?? "Producto",
@@ -173,11 +175,17 @@ export async function instantaneasDe(db: Db, ids: string[]) {
 /** El precio que se cobra, leído en el momento. `null` si ya no se vende. */
 export async function precioVigente(db: Db, productoId: string) {
 	const [fila] = await db
-		.select({ estado: e.productos.estado, precioBase: e.productoPrecios.precioBase })
+		.select({
+			estado: e.productos.estado,
+			precioBase: e.productoPrecios.precioBase,
+		})
 		.from(e.productos)
-		.leftJoin(e.productoPrecios, eq(e.productoPrecios.productoId, e.productos.id))
+		.leftJoin(
+			e.productoPrecios,
+			eq(e.productoPrecios.productoId, e.productos.id),
+		)
 		.where(eq(e.productos.id, productoId));
 
-	if (!fila || fila.estado !== "activo") return null;
+	if (fila?.estado !== "activo") return null;
 	return Number(fila.precioBase ?? 0);
 }

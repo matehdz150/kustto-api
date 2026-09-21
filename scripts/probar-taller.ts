@@ -21,11 +21,17 @@ import { VivoGateway } from "../src/vivo/vivo.gateway";
 let fallos = 0;
 
 function comprobar(que: string, bien: boolean, detalle = "") {
-	console.log(`  ${bien ? "ok  " : "FALLA"}  ${que}${detalle ? ` — ${detalle}` : ""}`);
+	console.log(
+		`  ${bien ? "ok  " : "FALLA"}  ${que}${detalle ? ` — ${detalle}` : ""}`,
+	);
 	if (!bien) fallos++;
 }
 
-async function falla(que: string, fn: () => Promise<unknown>, esperado: string) {
+async function falla(
+	que: string,
+	fn: () => Promise<unknown>,
+	esperado: string,
+) {
 	try {
 		await fn();
 		comprobar(que, false, "no lanzó");
@@ -70,10 +76,20 @@ async function principal() {
 		categoryIds: [categoria.id],
 		images: [{ url: "/medios/productos/x.png", order: 0 }],
 		colors: [{ name: "Negro", hex: "#000" }],
-		sizes: [{ size: "S", widthIn: 18, lengthIn: 27 }, { size: "M", widthIn: 20, lengthIn: 28 }],
+		sizes: [
+			{ size: "S", widthIn: 18, lengthIn: 27 },
+			{ size: "M", widthIn: 20, lengthIn: 28 },
+		],
 		pesoPorTalla: { S: 180, M: 200 },
 		printSides: [
-			{ sideKey: "front", widthCm: 28, heightCm: 35, dpi: 300, tecnica: "dtf", recargo: 25 },
+			{
+				sideKey: "front",
+				widthCm: 28,
+				heightCm: 35,
+				dpi: 300,
+				tecnica: "dtf",
+				recargo: 25,
+			},
 		],
 		pricing: { basePrice: 199.9, perSidePrice: 30 },
 		production: { meta: { diasProduccion: 7 } },
@@ -85,7 +101,11 @@ async function principal() {
 	console.log("\n1. Alta de producto");
 
 	const borrador = await productos.crear(tallerId, base(`Playera ${sufijo}`));
-	comprobar("sin `enviar`, nace en borrador", borrador.estado === "borrador", borrador.estado);
+	comprobar(
+		"sin `enviar`, nace en borrador",
+		borrador.estado === "borrador",
+		borrador.estado,
+	);
 	comprobar(
 		"guarda sus piezas",
 		borrador.colors.length === 1 &&
@@ -99,7 +119,8 @@ async function principal() {
 	);
 	comprobar(
 		"el recargo del lado y el general conviven",
-		borrador.printSides[0].recargo === 25 && borrador.pricing?.perSidePrice === 30,
+		borrador.printSides[0].recargo === 25 &&
+			borrador.pricing?.perSidePrice === 30,
 	);
 	comprobar(
 		"el peso va por talla, no por variante",
@@ -108,7 +129,8 @@ async function principal() {
 	);
 	comprobar(
 		"las existencias quedan por variante",
-		borrador.existencias["Negro|S"] === 10 && borrador.existencias["Negro|M"] === 4,
+		borrador.existencias["Negro|S"] === 10 &&
+			borrador.existencias["Negro|M"] === 4,
 		JSON.stringify(borrador.existencias),
 	);
 
@@ -116,7 +138,11 @@ async function principal() {
 		...base(`Playera ${sufijo}`),
 		enviar: true,
 	});
-	comprobar("con `enviar`, va a revisión", enviado.estado === "en_revision", enviado.estado);
+	comprobar(
+		"con `enviar`, va a revisión",
+		enviado.estado === "en_revision",
+		enviado.estado,
+	);
 	comprobar(
 		"dos productos con el mismo nombre conviven con slugs distintos",
 		borrador.slug !== enviado.slug,
@@ -141,7 +167,14 @@ async function principal() {
 		() =>
 			productos.crear(tallerId, {
 				...base(`T ${sufijo}`),
-				printSides: [{ sideKey: "front", widthCm: 28, heightCm: 35, tecnica: "laser-magico" }],
+				printSides: [
+					{
+						sideKey: "front",
+						widthCm: 28,
+						heightCm: 35,
+						tecnica: "laser-magico",
+					},
+				],
 			}),
 		"No conocemos la técnica",
 	);
@@ -151,7 +184,9 @@ async function principal() {
 		() =>
 			productos.crear(tallerId, {
 				...base(`R ${sufijo}`),
-				printSides: [{ sideKey: "front", widthCm: 28, heightCm: 35, recargo: -10 }],
+				printSides: [
+					{ sideKey: "front", widthCm: 28, heightCm: 35, recargo: -10 },
+				],
 			}),
 		"de 0 en adelante",
 	);
@@ -162,7 +197,17 @@ async function principal() {
 			productos.crear(tallerId, {
 				...base(`F ${sufijo}`),
 				fotosReales: [
-					{ lado: "front", color: "Negro", url: "https://otro.com/x.png", esquinas: [{x:0,y:0},{x:1,y:0},{x:1,y:1},{x:0,y:1}] },
+					{
+						lado: "front",
+						color: "Negro",
+						url: "https://otro.com/x.png",
+						esquinas: [
+							{ x: 0, y: 0 },
+							{ x: 1, y: 0 },
+							{ x: 1, y: 1 },
+							{ x: 0, y: 1 },
+						],
+					},
 				],
 			}),
 		"no enlazada de fuera",
@@ -174,7 +219,17 @@ async function principal() {
 			productos.crear(tallerId, {
 				...base(`E ${sufijo}`),
 				fotosReales: [
-					{ lado: "front", color: "Negro", url: "/medios/x.png", esquinas: [{x:120,y:80},{x:1,y:0},{x:1,y:1},{x:0,y:1}] },
+					{
+						lado: "front",
+						color: "Negro",
+						url: "/medios/x.png",
+						esquinas: [
+							{ x: 120, y: 80 },
+							{ x: 1, y: 0 },
+							{ x: 1, y: 1 },
+							{ x: 0, y: 1 },
+						],
+					},
 				],
 			}),
 		"fracciones de 0 a 1",
@@ -193,7 +248,12 @@ async function principal() {
 	const conBanda = await productos.crear(tallerId, {
 		...base(`Termo ${sufijo}`),
 		fotosReales: [
-			{ lado: "wrap", color: "Negro", url: "/medios/x.png", banda: { arriba: 0.2, abajo: 0.5, bombeo: -0.08 } },
+			{
+				lado: "wrap",
+				color: "Negro",
+				url: "/medios/x.png",
+				banda: { arriba: 0.2, abajo: 0.5, bombeo: -0.08 },
+			},
 		],
 	});
 	comprobar(
@@ -204,7 +264,10 @@ async function principal() {
 	/* ─── 3. Edición ──────────────────────────────────────────────────── */
 	console.log("\n3. Edición");
 
-	await db.update(e.productos).set({ estado: "activo" }).where(eq(e.productos.id, borrador.id));
+	await db
+		.update(e.productos)
+		.set({ estado: "activo" })
+		.where(eq(e.productos.id, borrador.id));
 
 	const editado = await productos.actualizar(tallerId, borrador.id, {
 		description: "Otra descripción",
@@ -217,7 +280,10 @@ async function principal() {
 	comprobar("y lo que no se manda se queda", editado.colors.length === 1);
 
 	const reemplazado = await productos.actualizar(tallerId, borrador.id, {
-		colors: [{ name: "Blanco", hex: "#FFF" }, { name: "Azul", hex: "#00F" }],
+		colors: [
+			{ name: "Blanco", hex: "#FFF" },
+			{ name: "Azul", hex: "#00F" },
+		],
 	});
 	comprobar(
 		"mandar una lista la reemplaza entera",
@@ -233,7 +299,10 @@ async function principal() {
 	/* Se publica a propósito: lo que hay que demostrar es que contar el stock
 	   NO lo despublica. Con el producto ya en revisión la comprobación no
 	   probaría nada. */
-	await db.update(e.productos).set({ estado: "activo" }).where(eq(e.productos.id, borrador.id));
+	await db
+		.update(e.productos)
+		.set({ estado: "activo" })
+		.where(eq(e.productos.id, borrador.id));
 
 	const sumado = await productos.moverExistencias(tallerId, borrador.id, {
 		clave: "Negro|S",
@@ -256,7 +325,10 @@ async function principal() {
 		operacion: "corregir",
 		cantidad: 14,
 	});
-	comprobar("corregir escribe el absoluto", corregido.existencias["Negro|S"] === 14);
+	comprobar(
+		"corregir escribe el absoluto",
+		corregido.existencias["Negro|S"] === 14,
+	);
 
 	await falla(
 		"una variante que no existe se rechaza",
@@ -290,7 +362,10 @@ async function principal() {
 	);
 	await falla(
 		"ni lo edita",
-		() => productos.actualizar("otro-taller-inventado", borrador.id, { name: "mío" }),
+		() =>
+			productos.actualizar("otro-taller-inventado", borrador.id, {
+				name: "mío",
+			}),
 		"no existe o no es tuyo",
 	);
 
@@ -300,12 +375,18 @@ async function principal() {
 		archivado.estado === "archivado",
 		archivado.estado,
 	);
-	const [sigue] = await db.select().from(e.productos).where(eq(e.productos.id, borrador.id));
+	const [sigue] = await db
+		.select()
+		.from(e.productos)
+		.where(eq(e.productos.id, borrador.id));
 	comprobar("y su fila sigue ahí (la lee 'volver a pedir')", Boolean(sigue));
 
 	const borrado = await productos.borrar(tallerId, conBanda.id);
 	comprobar("un borrador se borra de verdad", borrado.estado === "borrado");
-	const [ya] = await db.select().from(e.productos).where(eq(e.productos.id, conBanda.id));
+	const [ya] = await db
+		.select()
+		.from(e.productos)
+		.where(eq(e.productos.id, conBanda.id));
 	comprobar("y su fila desaparece", !ya);
 
 	const lista = await productos.listar(tallerId);
@@ -322,7 +403,13 @@ async function principal() {
 		"una recolección sin colonia se rechaza (Skydropx la exige)",
 		() =>
 			taller.actualizar(quien, {
-				recoleccion: { calle: "x", numero: "1", ciudad: "GDL", estado: "Jalisco", cp: "44160" },
+				recoleccion: {
+					calle: "x",
+					numero: "1",
+					ciudad: "GDL",
+					estado: "Jalisco",
+					cp: "44160",
+				},
 			}),
 		"Falta la colonia",
 	);
@@ -333,8 +420,14 @@ async function principal() {
 		"no enlazado de fuera",
 	);
 
-	const perfil = await taller.actualizar(quien, { displayName: "Taller Nuevo", bio: "Hola" });
-	comprobar("se puede editar lo que sí está en la lista blanca", perfil.displayName === "Taller Nuevo");
+	const perfil = await taller.actualizar(quien, {
+		displayName: "Taller Nuevo",
+		bio: "Hola",
+	});
+	comprobar(
+		"se puede editar lo que sí está en la lista blanca",
+		perfil.displayName === "Taller Nuevo",
+	);
 	comprobar("y el correo NO se toca desde aquí", perfil.email === fila.correo);
 
 	const foto = await taller.urlParaFoto(quien, { contentType: "image/png" });
@@ -378,11 +471,17 @@ async function principal() {
 	});
 	await esperar(300);
 
-	comprobar("el aviso llega a la conexión del taller", recibidos.length === 1, recibidos[0]);
+	comprobar(
+		"el aviso llega a la conexión del taller",
+		recibidos.length === 1,
+		recibidos[0],
+	);
 	const aviso = JSON.parse(recibidos[0] ?? "{}");
 	comprobar(
 		"y es un aviso corto, no el pedido entero",
-		aviso.tipo === "pedido-nuevo" && aviso.folio === "481902-1" && !("lineas" in aviso),
+		aviso.tipo === "pedido-nuevo" &&
+			aviso.folio === "481902-1" &&
+			!("lineas" in aviso),
 		Object.keys(aviso).join(", "),
 	);
 
@@ -399,9 +498,17 @@ async function principal() {
 	const visto: string[] = [];
 	await espia.psubscribe("taller:*");
 	espia.on("pmessage", (_p, canal) => visto.push(canal));
-	await avisos.alTaller(tallerId, { tipo: "pedido-movido", pedidoId: "y", estado: "listo" });
+	await avisos.alTaller(tallerId, {
+		tipo: "pedido-movido",
+		pedidoId: "y",
+		estado: "listo",
+	});
 	await esperar(300);
-	comprobar("se publica en `taller:<id>`", visto[0] === `taller:${tallerId}`, visto[0]);
+	comprobar(
+		"se publica en `taller:<id>`",
+		visto[0] === `taller:${tallerId}`,
+		visto[0],
+	);
 	await espia.quit();
 
 	console.log(`\n${fallos === 0 ? "TODO BIEN" : `${fallos} FALLOS`}\n`);

@@ -28,7 +28,11 @@ async function arrancar() {
 	app.enableShutdownHooks();
 
 	app.useGlobalPipes(
-		new ValidationPipe({ transform: true, whitelist: true, forbidNonWhitelisted: true }),
+		new ValidationPipe({
+			transform: true,
+			whitelist: true,
+			forbidNonWhitelisted: true,
+		}),
 	);
 
 	/**
@@ -53,16 +57,18 @@ async function arrancar() {
 	 */
 	const vivo = app.get(VivoGateway);
 
-	app.getHttpServer().on("upgrade", (peticion: any, socket: any, cabeza: any) => {
-		const ruta = new URL(peticion.url ?? "", "http://interno").pathname;
+	app
+		.getHttpServer()
+		.on("upgrade", (peticion: any, socket: any, cabeza: any) => {
+			const ruta = new URL(peticion.url ?? "", "http://interno").pathname;
 
-		if (ruta !== "/eventos") {
-			socket.destroy();
-			return;
-		}
+			if (ruta !== "/eventos") {
+				socket.destroy();
+				return;
+			}
 
-		vivo.enganchar(peticion, socket, cabeza);
-	});
+			vivo.enganchar(peticion, socket, cabeza);
+		});
 
 	await app.listen(env.PORT, "0.0.0.0");
 	new Logger("arranque").log(`La API escucha en el puerto ${env.PORT}`);

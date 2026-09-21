@@ -7,8 +7,8 @@ import {
 	NotFoundException,
 	UnauthorizedException,
 } from "@nestjs/common";
-import { and, eq, inArray, sql } from "drizzle-orm";
 import type { Queue } from "bullmq";
+import { and, eq, inArray } from "drizzle-orm";
 import { AvisosService } from "../avisos/avisos.service";
 import { COLAS } from "../colas/colas";
 import { COLA } from "../colas/colas.module";
@@ -17,7 +17,6 @@ import { pedidoParaTaller, pedidoRecibido } from "../correo/plantillas";
 import { DB, type Db } from "../db/db.module";
 import * as e from "../db/esquema";
 import { EnviosService } from "../envios/envios.service";
-import { ajustarExistencias } from "./existencias";
 import {
 	aNumeric,
 	aPesos,
@@ -28,6 +27,7 @@ import {
 	leerEntrega,
 	tokenValido,
 } from "./dominio";
+import { ajustarExistencias } from "./existencias";
 import {
 	aPartida,
 	claveDeVariante,
@@ -61,7 +61,8 @@ export class PedidosService {
 		const comprador = this.leerComprador(cuerpo);
 		const lineas = Array.isArray(cuerpo.lineas) ? cuerpo.lineas : [];
 
-		if (lineas.length === 0) throw new BadRequestException("El pedido va vacío");
+		if (lineas.length === 0)
+			throw new BadRequestException("El pedido va vacío");
 
 		const productos = await this.leerProductosPublicados(
 			lineas.map((l: any) => String(l?.productoId ?? "")),
@@ -76,7 +77,10 @@ export class PedidosService {
 		 */
 		const grupos = new Map<string, number[]>();
 		productos.forEach((producto, i) => {
-			grupos.set(producto.tallerId, [...(grupos.get(producto.tallerId) ?? []), i]);
+			grupos.set(producto.tallerId, [
+				...(grupos.get(producto.tallerId) ?? []),
+				i,
+			]);
 		});
 
 		const entregas = await this.entregasPorTaller(cuerpo, [...grupos.keys()]);
@@ -208,7 +212,9 @@ export class PedidosService {
 
 		if (pedido) {
 			if (!tokenValido(pedido.huellaDeToken, token)) {
-				throw new UnauthorizedException("Ese enlace de seguimiento no es válido");
+				throw new UnauthorizedException(
+					"Ese enlace de seguimiento no es válido",
+				);
 			}
 			return paraComprador(pedido);
 		}
@@ -316,7 +322,12 @@ export class PedidosService {
 				nombrePublico: e.talleres.nombrePublico,
 			})
 			.from(e.talleres)
-			.where(inArray(e.talleres.id, datos.partes.map((p) => p.tallerId)));
+			.where(
+				inArray(
+					e.talleres.id,
+					datos.partes.map((p) => p.tallerId),
+				),
+			);
 
 		for (const parte of datos.partes) {
 			const taller = talleres.find((t) => t.id === parte.tallerId);
@@ -342,10 +353,15 @@ export class PedidosService {
 	private leerComprador(c: Record<string, any>) {
 		const comprador = {
 			nombre: String(c.comprador?.nombre ?? "").trim(),
-			email: String(c.comprador?.email ?? "").trim().toLowerCase(),
+			email: String(c.comprador?.email ?? "")
+				.trim()
+				.toLowerCase(),
 			whatsapp: String(c.comprador?.whatsapp ?? "").trim() || null,
 			/* El tope es para que no quepa un documento, no una indicación. */
-			notas: String(c.comprador?.notas ?? "").trim().slice(0, 1000) || null,
+			notas:
+				String(c.comprador?.notas ?? "")
+					.trim()
+					.slice(0, 1000) || null,
 		};
 
 		if (!comprador.nombre) throw new BadRequestException("Falta tu nombre");
@@ -393,7 +409,10 @@ export class PedidosService {
 		const global = porTaller.size === 0 ? leerEntrega(c.entrega) : null;
 		const entregas = new Map<
 			string,
-			{ entrega: Entrega; envio: Awaited<ReturnType<EnviosService["envioDelPedido"]>> | null }
+			{
+				entrega: Entrega;
+				envio: Awaited<ReturnType<EnviosService["envioDelPedido"]>> | null;
+			}
 		>();
 
 		for (const tallerId of talleres) {
@@ -451,14 +470,13 @@ export class PedidosService {
 			.select()
 			.from(e.productos)
 			.where(
-				and(
-					inArray(e.productos.id, unicos),
-					eq(e.productos.estado, "activo"),
-				),
+				and(inArray(e.productos.id, unicos), eq(e.productos.estado, "activo")),
 			);
 
 		if (filas.length !== unicos.length) {
-			throw new BadRequestException("Uno de los productos ya no está disponible");
+			throw new BadRequestException(
+				"Uno de los productos ya no está disponible",
+			);
 		}
 
 		const [precios, produccion, lados, colores, imagenes, existencias] =
@@ -719,7 +737,12 @@ export class PedidosService {
 	) {
 		const porVariante = new Map<
 			string,
-			{ productoId: string; color: string | null; talla: string; piezas: number }
+			{
+				productoId: string;
+				color: string | null;
+				talla: string;
+				piezas: number;
+			}
 		>();
 
 		for (const parte of partes) {

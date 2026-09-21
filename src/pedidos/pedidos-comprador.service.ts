@@ -33,9 +33,7 @@ export class PedidosCompradorService {
 	 */
 	private correoDe(quien: Identidad) {
 		if (!quien.correoVerificado) {
-			throw new ForbiddenException(
-				"Verifica tu correo para ver tus pedidos",
-			);
+			throw new ForbiddenException("Verifica tu correo para ver tus pedidos");
 		}
 		return quien.correo;
 	}
@@ -98,9 +96,8 @@ export class PedidosCompradorService {
 			),
 			totalAhora: aPesos(disponibles.reduce((n, p) => n + p.importe, 0)),
 			/** Cuántos talleres, para poder decir cuántos pedidos van a salir. */
-			talleres: new Set(
-				disponibles.map((p) => p.proveedorId).filter(Boolean),
-			).size,
+			talleres: new Set(disponibles.map((p) => p.proveedorId).filter(Boolean))
+				.size,
 			lineas,
 		};
 	}
@@ -117,7 +114,11 @@ export class PedidosCompradorService {
 	 * se sigue creando por el camino de siempre, con sus precios recalculados
 	 * desde la tabla. Repetir NO es una segunda forma de escribir pedidos.
 	 */
-	async alCarrito(quien: Identidad, id: string, cuerpo: Record<string, unknown>) {
+	async alCarrito(
+		quien: Identidad,
+		id: string,
+		cuerpo: Record<string, unknown>,
+	) {
 		const pedidas = cuerpo?.lineas;
 		if (!Array.isArray(pedidas) || pedidas.length === 0) {
 			throw new BadRequestException("Elige al menos una línea para repetir");
@@ -181,7 +182,9 @@ export class PedidosCompradorService {
 		}
 
 		if (articulos.length === 0) {
-			throw new BadRequestException("Ninguna de esas líneas se puede volver a pedir");
+			throw new BadRequestException(
+				"Ninguna de esas líneas se puede volver a pedir",
+			);
 		}
 
 		return { articulos, descartadas };
@@ -196,7 +199,9 @@ export class PedidosCompradorService {
 	 * callando.
 	 */
 	private compararLinea(
-		l: Awaited<ReturnType<PedidosService["conPartidas"]>>[number]["lineas"][number],
+		l: Awaited<
+			ReturnType<PedidosService["conPartidas"]>
+		>[number]["lineas"][number],
 		hoy: Map<string, ProductoDeHoy>,
 	) {
 		const piezas = l.tallas.reduce((n, t) => n + t.piezas, 0);

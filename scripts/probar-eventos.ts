@@ -7,23 +7,29 @@
  */
 import { NestFactory } from "@nestjs/core";
 import { eq, ne } from "drizzle-orm";
-import { AppModule } from "../src/app.module";
 import { AlmacenService } from "../src/almacen/almacen.service";
+import { AppModule } from "../src/app.module";
 import { PerfilService } from "../src/cuenta/perfil.service";
 import { DB, type Db } from "../src/db/db.module";
 import * as e from "../src/db/esquema";
-import { EventosPublicoService } from "../src/eventos/eventos-publico.service";
 import { EventosService } from "../src/eventos/eventos.service";
+import { EventosPublicoService } from "../src/eventos/eventos-publico.service";
 import { ArteService } from "../src/subidas/arte.service";
 
 let fallos = 0;
 
 function comprobar(que: string, bien: boolean, detalle = "") {
-	console.log(`  ${bien ? "ok  " : "FALLA"}  ${que}${detalle ? ` — ${detalle}` : ""}`);
+	console.log(
+		`  ${bien ? "ok  " : "FALLA"}  ${que}${detalle ? ` — ${detalle}` : ""}`,
+	);
 	if (!bien) fallos++;
 }
 
-async function falla(que: string, fn: () => Promise<unknown>, esperado: string) {
+async function falla(
+	que: string,
+	fn: () => Promise<unknown>,
+	esperado: string,
+) {
 	try {
 		await fn();
 		comprobar(que, false, "no lanzó");
@@ -62,9 +68,14 @@ async function principal() {
 	};
 	await perfil.guardar(quien, { nombre: "Prueba" });
 
-	const activos = await db.select().from(e.productos).where(eq(e.productos.estado, "activo"));
+	const activos = await db
+		.select()
+		.from(e.productos)
+		.where(eq(e.productos.estado, "activo"));
 	const producto = activos[0];
-	const mismoTaller = activos.find((p) => p.id !== producto.id && p.tallerId === producto.tallerId);
+	const mismoTaller = activos.find(
+		(p) => p.id !== producto.id && p.tallerId === producto.tallerId,
+	);
 	const otroTaller = activos.find((p) => p.tallerId !== producto.tallerId);
 	const [precio] = await db
 		.select()
@@ -101,10 +112,18 @@ async function principal() {
 		/* ─── 1. Validaciones ─────────────────────────────────────────── */
 		console.log("\n1. Validaciones al crear");
 
-		await falla("sin nombre", () => eventos.crear(quien, datos({ nombre: "" })), "nombre");
+		await falla(
+			"sin nombre",
+			() => eventos.crear(quien, datos({ nombre: "" })),
+			"nombre",
+		);
 		await falla(
 			"cierre antes de apertura",
-			() => eventos.crear(quien, datos({ cierraEn: new Date(Date.now() - 2 * hora).toISOString() })),
+			() =>
+				eventos.crear(
+					quien,
+					datos({ cierraEn: new Date(Date.now() - 2 * hora).toISOString() }),
+				),
 			"posterior",
 		);
 		await falla(
@@ -114,7 +133,15 @@ async function principal() {
 		);
 		await falla(
 			"seis productos",
-			() => eventos.crear(quien, datos({ productos: Array(6).fill(0).map(() => crypto.randomUUID()) })),
+			() =>
+				eventos.crear(
+					quien,
+					datos({
+						productos: Array(6)
+							.fill(0)
+							.map(() => crypto.randomUUID()),
+					}),
+				),
 			"Elige entre 1 y 5",
 		);
 		if (inactivo) {
@@ -127,13 +154,21 @@ async function principal() {
 		if (otroTaller) {
 			await falla(
 				"productos de dos talleres",
-				() => eventos.crear(quien, datos({ productos: [producto.id, otroTaller.id] })),
+				() =>
+					eventos.crear(
+						quien,
+						datos({ productos: [producto.id, otroTaller.id] }),
+					),
 				"mismo taller",
 			);
 		}
 		await falla(
 			"portada en carpeta ajena",
-			() => eventos.crear(quien, datos({ imagen: `/medios/eventos/otro/${crypto.randomUUID()}.png` })),
+			() =>
+				eventos.crear(
+					quien,
+					datos({ imagen: `/medios/eventos/otro/${crypto.randomUUID()}.png` }),
+				),
 			"foto no es válida",
 		);
 
@@ -149,24 +184,48 @@ async function principal() {
 			creado.productos[0].precioDesde === Number(precio?.precioBase ?? 0),
 			String(creado.productos[0].precioDesde),
 		);
-		comprobar("personalización libre por defecto", creado.productos[0].personalizacion === "libre");
+		comprobar(
+			"personalización libre por defecto",
+			creado.productos[0].personalizacion === "libre",
+		);
 		comprobar("no trae participaciones", !("participaciones" in creado));
 
-		await falla("el enlace de un borrador no existe", () => publico.obtener(creado.codigo), "no existe");
+		await falla(
+			"el enlace de un borrador no existe",
+			() => publico.obtener(creado.codigo),
+			"no existe",
+		);
 
 		const item = creado.productos[0];
-		const editado = await eventos.actualizar(quien, eventoId, datos({ nombre: "Renombrado" }));
-		comprobar("editar conserva el id del renglón", editado.productos[0].id === item.id);
+		const editado = await eventos.actualizar(
+			quien,
+			eventoId,
+			datos({ nombre: "Renombrado" }),
+		);
+		comprobar(
+			"editar conserva el id del renglón",
+			editado.productos[0].id === item.id,
+		);
 		comprobar("editar cambia el nombre", editado.nombre === "Renombrado");
 
 		const ajeno = { ...quien, sub: "otro-organizador" };
-		await falla("otro organizador no lo ve", () => eventos.obtener(ajeno, eventoId), "no existe");
+		await falla(
+			"otro organizador no lo ve",
+			() => eventos.obtener(ajeno, eventoId),
+			"no existe",
+		);
 
 		/* ─── 3. Personalización y publicación ───────────────────────── */
 		console.log("\n3. Personalización y publicación");
 
-		await eventos.configurarProducto(quien, eventoId, item.id, { personalizacion: "bloqueada" });
-		await falla("bloqueada sin base no publica", () => eventos.publicar(quien, eventoId), "diseño base");
+		await eventos.configurarProducto(quien, eventoId, item.id, {
+			personalizacion: "bloqueada",
+		});
+		await falla(
+			"bloqueada sin base no publica",
+			() => eventos.publicar(quien, eventoId),
+			"diseño base",
+		);
 
 		const arteId = crypto.randomUUID();
 		const conBase = await eventos.configurarProducto(quien, eventoId, item.id, {
@@ -175,24 +234,48 @@ async function principal() {
 		});
 		comprobar(
 			"la ruta de la base la arma el servidor",
-			conBase.productos[0].disenoBase?.ruta === `/medios/plantillas/${quien.sub}/${arteId}/diseno.json`,
+			conBase.productos[0].disenoBase?.ruta ===
+				`/medios/plantillas/${quien.sub}/${arteId}/diseno.json`,
 		);
 		await falla(
 			"regla inventada",
-			() => eventos.configurarProducto(quien, eventoId, item.id, { personalizacion: "todo" }),
+			() =>
+				eventos.configurarProducto(quien, eventoId, item.id, {
+					personalizacion: "todo",
+				}),
 			"regla de personalización",
 		);
 		if (mismoTaller) {
-			await eventos.configurarProducto(quien, eventoId, conBase.productos[1].id, {
-				personalizacion: "sin_personalizacion",
-			});
+			await eventos.configurarProducto(
+				quien,
+				eventoId,
+				conBase.productos[1].id,
+				{
+					personalizacion: "sin_personalizacion",
+				},
+			);
 		}
 
 		const publicado = await eventos.publicar(quien, eventoId);
-		comprobar("publicado", publicado.estado === "publicado" && "publicadoEn" in publicado);
-		await falla("publicar dos veces", () => eventos.publicar(quien, eventoId), "ya fue publicado");
-		await falla("editar publicado", () => eventos.actualizar(quien, eventoId, datos()), "ya no puede");
-		await falla("borrar publicado", () => eventos.borrar(quien, eventoId), "borrador");
+		comprobar(
+			"publicado",
+			publicado.estado === "publicado" && "publicadoEn" in publicado,
+		);
+		await falla(
+			"publicar dos veces",
+			() => eventos.publicar(quien, eventoId),
+			"ya fue publicado",
+		);
+		await falla(
+			"editar publicado",
+			() => eventos.actualizar(quien, eventoId, datos()),
+			"ya no puede",
+		);
+		await falla(
+			"borrar publicado",
+			() => eventos.borrar(quien, eventoId),
+			"borrador",
+		);
 
 		/* ─── 4. El invitado ─────────────────────────────────────────── */
 		console.log("\n4. El invitado");
@@ -225,11 +308,15 @@ async function principal() {
 		const rutaDiseno = firmado.subidas[0].ruta;
 		comprobar(
 			"el arte cae bajo evento y producto",
-			rutaDiseno === `/eventos/${eventoId}/${item.id}/${firmado.itemId}/diseno.json`,
+			rutaDiseno ===
+				`/eventos/${eventoId}/${item.id}/${firmado.itemId}/diseno.json`,
 			rutaDiseno,
 		);
 
-		const participacion = (extra: Record<string, unknown> = {}, linea: Record<string, unknown> = {}) => ({
+		const participacion = (
+			extra: Record<string, unknown> = {},
+			linea: Record<string, unknown> = {},
+		) => ({
 			intentoId: crypto.randomUUID(),
 			participante: { nombre: "Invitada", email: "Invitada@Kustto.mx " },
 			lineas: [
@@ -257,25 +344,45 @@ async function principal() {
 
 		await falla(
 			"talla que no existe",
-			() => publico.participar(creado.codigo, participacion({}, { talla: "XXXXL" })),
+			() =>
+				publico.participar(
+					creado.codigo,
+					participacion({}, { talla: "XXXXL" }),
+				),
 			"talla",
 		);
 		await falla(
 			"diseño de otro producto",
-			() => publico.participar(creado.codigo, participacion({}, { diseno: { carritoId: crypto.randomUUID() } })),
+			() =>
+				publico.participar(
+					creado.codigo,
+					participacion({}, { diseno: { carritoId: crypto.randomUUID() } }),
+				),
 			"no pertenece",
 		);
 		await falla(
 			"correo inválido",
-			() => publico.participar(creado.codigo, participacion({ participante: { nombre: "x", email: "x" } })),
+			() =>
+				publico.participar(
+					creado.codigo,
+					participacion({ participante: { nombre: "x", email: "x" } }),
+				),
 			"correo válido",
 		);
 
 		const envio = participacion();
 		const hecha = await publico.participar(creado.codigo, envio);
-		const esperado = Math.round(Number(precio?.precioBase ?? 0) * 2 * 100) / 100;
-		comprobar("el precio sale de la base, no del cuerpo", hecha.subtotal === esperado, String(hecha.subtotal));
-		comprobar("correo normalizado", (hecha.participante as any).email === "invitada@kustto.mx");
+		const esperado =
+			Math.round(Number(precio?.precioBase ?? 0) * 2 * 100) / 100;
+		comprobar(
+			"el precio sale de la base, no del cuerpo",
+			hecha.subtotal === esperado,
+			String(hecha.subtotal),
+		);
+		comprobar(
+			"correo normalizado",
+			(hecha.participante as any).email === "invitada@kustto.mx",
+		);
 		comprobar("pago pendiente", hecha.estadoPago === "pendiente");
 
 		const otraVez = await publico.participar(creado.codigo, envio);
@@ -285,36 +392,62 @@ async function principal() {
 				.from(e.eventoParticipaciones)
 				.where(eq(e.eventoParticipaciones.eventoId, eventoId))
 		).length;
-		comprobar("reintentar no duplica", otraVez.id === hecha.id && cuantas === 1, `${cuantas} guardadas`);
+		comprobar(
+			"reintentar no duplica",
+			otraVez.id === hecha.id && cuantas === 1,
+			`${cuantas} guardadas`,
+		);
 
-		const sinDiseno = await publico.participar(creado.codigo, participacion({}, { diseno: null }));
+		const sinDiseno = await publico.participar(
+			creado.codigo,
+			participacion({}, { diseno: null }),
+		);
 		comprobar(
 			"sin diseño se queda con la base",
 			(sinDiseno.lineas as any[])[0].diseno?.arteId === arteId,
 		);
 
 		const panel = await eventos.obtener(quien, eventoId);
-		comprobar("el organizador ve las participaciones", panel.participaciones.length === 2);
+		comprobar(
+			"el organizador ve las participaciones",
+			panel.participaciones.length === 2,
+		);
 
 		/* ─── 5. Cierre ──────────────────────────────────────────────── */
 		console.log("\n5. Cierre");
 
 		await eventos.cerrar(quien, eventoId);
-		comprobar("cerrado en el enlace", (await publico.obtener(creado.codigo)).estado === "cerrado");
+		comprobar(
+			"cerrado en el enlace",
+			(await publico.obtener(creado.codigo)).estado === "cerrado",
+		);
 		await falla(
 			"cerrado no acepta participaciones",
-			() => publico.participar(creado.codigo, participacion({}, { diseno: null })),
+			() =>
+				publico.participar(creado.codigo, participacion({}, { diseno: null })),
 			"no está recibiendo",
 		);
 
 		/* ─── 6. Subidas sueltas ─────────────────────────────────────── */
 		console.log("\n6. Subidas sueltas");
 
-		const portada = await eventos.firmarFoto(quien, { tipo: "image/png", bytes: 100 });
-		comprobar("portada en la carpeta del organizador", portada.url.startsWith(`/medios/eventos/${quien.sub}/`));
-		await falla("portada SVG", () => eventos.firmarFoto(quien, { tipo: "image/svg+xml", bytes: 10 }), "no se puede usar");
+		const portada = await eventos.firmarFoto(quien, {
+			tipo: "image/png",
+			bytes: 100,
+		});
+		comprobar(
+			"portada en la carpeta del organizador",
+			portada.url.startsWith(`/medios/eventos/${quien.sub}/`),
+		);
+		await falla(
+			"portada SVG",
+			() => eventos.firmarFoto(quien, { tipo: "image/svg+xml", bytes: 10 }),
+			"no se puede usar",
+		);
 
-		const carrito = await arte.firmar({ archivos: [{ tipo: "arte", lado: "frente", bytes: 10 }] });
+		const carrito = await arte.firmar({
+			archivos: [{ tipo: "arte", lado: "frente", bytes: 10 }],
+		});
 		comprobar(
 			"carrito público firma bajo carritos/",
 			carrito.subidas[0].ruta === `/carritos/${carrito.itemId}/frente-arte.png`,

@@ -91,15 +91,20 @@ export class EventosPublicoService {
 
 		const eventoItemId = String(cuerpo?.eventoItemId ?? "");
 		const producto = productos.find((p) => p.id === eventoItemId);
-		if (!producto) throw new BadRequestException("Ese producto no pertenece al evento.");
+		if (!producto)
+			throw new BadRequestException("Ese producto no pertenece al evento.");
 		if (producto.personalizacion === "sin_personalizacion") {
 			throw new ConflictException("Este producto no admite personalización.");
 		}
 
-		const resultado = await this.arte.firmar(cuerpo, `eventos/${evento.id}/${eventoItemId}`);
+		const resultado = await this.arte.firmar(
+			cuerpo,
+			`eventos/${evento.id}/${eventoItemId}`,
+		);
 
 		const diseno = resultado.subidas.find((s) => s.tipo === "diseno");
-		if (!diseno) throw new BadRequestException("Falta el archivo editable del diseño.");
+		if (!diseno)
+			throw new BadRequestException("Falta el archivo editable del diseño.");
 
 		await this.db.insert(e.eventoDisenos).values({
 			id: resultado.itemId,
@@ -115,7 +120,9 @@ export class EventosPublicoService {
 	async participar(codigo: string, cuerpo: Cuerpo) {
 		const { evento, productos } = await this.porCodigo(codigo);
 		if (estadoPublico(evento) !== "abierto") {
-			throw new ConflictException("Este evento no está recibiendo participaciones.");
+			throw new ConflictException(
+				"Este evento no está recibiendo participaciones.",
+			);
 		}
 
 		const c = cuerpo ?? {};
@@ -151,7 +158,8 @@ export class EventosPublicoService {
 
 		for (const linea of crudas) {
 			const permitido = permitidos.get(String(linea?.eventoItemId));
-			if (!permitido) throw new BadRequestException("Ese producto no pertenece al evento.");
+			if (!permitido)
+				throw new BadRequestException("Ese producto no pertenece al evento.");
 
 			const piezas = Math.trunc(Number(linea.piezas ?? 0));
 			if (!(piezas >= 1 && piezas <= 50)) {
@@ -171,7 +179,9 @@ export class EventosPublicoService {
 			   cambió después de armar el evento, se cobra el de hoy. */
 			const unitario = await precioVigente(this.db, permitido.productoId);
 			if (unitario === null) {
-				throw new ConflictException("Uno de los productos ya no está disponible.");
+				throw new ConflictException(
+					"Uno de los productos ya no está disponible.",
+				);
 			}
 
 			const total = Math.round(unitario * piezas * 100) / 100;
@@ -218,7 +228,8 @@ export class EventosPublicoService {
 					eq(e.eventoParticipaciones.eventoId, evento.id),
 				),
 			);
-		if (!existente) throw new ConflictException("Ese intento ya se usó en otro evento.");
+		if (!existente)
+			throw new ConflictException("Ese intento ya se usó en otro evento.");
 		return vistaDeParticipacion(existente);
 	}
 
@@ -233,10 +244,13 @@ export class EventosPublicoService {
 		producto: ProductoDeEvento,
 		valor: unknown,
 	): Promise<{ carritoId: string; ruta: string } | DisenoBase | null> {
-		if (valor === null || valor === undefined) return producto.disenoBase ?? null;
+		if (valor === null || valor === undefined)
+			return producto.disenoBase ?? null;
 
 		if (producto.personalizacion === "sin_personalizacion") {
-			throw new BadRequestException("Ese producto no admite un diseño de invitado.");
+			throw new BadRequestException(
+				"Ese producto no admite un diseño de invitado.",
+			);
 		}
 
 		const carritoId = String((valor as Cuerpo).carritoId ?? "");
@@ -247,9 +261,16 @@ export class EventosPublicoService {
 		const [apunte] = await this.db
 			.select()
 			.from(e.eventoDisenos)
-			.where(and(eq(e.eventoDisenos.id, carritoId), eq(e.eventoDisenos.eventoId, evento.id)));
+			.where(
+				and(
+					eq(e.eventoDisenos.id, carritoId),
+					eq(e.eventoDisenos.eventoId, evento.id),
+				),
+			);
 		if (!apunte || apunte.eventoProductoId !== producto.id) {
-			throw new BadRequestException("Ese diseño no pertenece a este producto del evento.");
+			throw new BadRequestException(
+				"Ese diseño no pertenece a este producto del evento.",
+			);
 		}
 
 		const rutaEsperada = `/eventos/${evento.id}/${producto.id}/${carritoId}/diseno.json`;
@@ -258,16 +279,22 @@ export class EventosPublicoService {
 		}
 
 		if (!(await this.almacen.existe(rutaEsperada.slice(1)))) {
-			throw new BadRequestException("El diseño todavía no terminó de subir. Inténtalo otra vez.");
+			throw new BadRequestException(
+				"El diseño todavía no terminó de subir. Inténtalo otra vez.",
+			);
 		}
 
 		return { carritoId, ruta: rutaEsperada };
 	}
 
 	private async porCodigo(codigo: string) {
-		if (!CODIGO.test(codigo)) throw new NotFoundException("Ese evento no existe.");
+		if (!CODIGO.test(codigo))
+			throw new NotFoundException("Ese evento no existe.");
 
-		const [evento] = await this.db.select().from(e.eventos).where(eq(e.eventos.codigo, codigo));
+		const [evento] = await this.db
+			.select()
+			.from(e.eventos)
+			.where(eq(e.eventos.codigo, codigo));
 		/* Un borrador tiene código desde que se crea, pero su enlace no existe
 		   hasta publicarlo: en DynamoDB el candado del código se escribía al
 		   publicar. Se responde igual que si no existiera. */
@@ -275,9 +302,9 @@ export class EventosPublicoService {
 			throw new NotFoundException("Ese evento no existe.");
 		}
 
-		const productos = ((await productosDe(this.db, [evento.id])).get(evento.id) ?? []).map(
-			vistaDeProducto,
-		);
+		const productos = (
+			(await productosDe(this.db, [evento.id])).get(evento.id) ?? []
+		).map(vistaDeProducto);
 		return { evento, productos };
 	}
 }

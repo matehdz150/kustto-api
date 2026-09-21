@@ -10,8 +10,8 @@ import { AlmacenService } from "../almacen/almacen.service";
 import type { Identidad } from "../auth/cognito";
 import { DB, type Db } from "../db/db.module";
 import * as e from "../db/esquema";
-import { correoDe, idOrdenable } from "./comun";
 import { copiarArteDePedido } from "../pedidos/arte-al-carrito";
+import { correoDe, idOrdenable } from "./comun";
 import { PerfilService } from "./perfil.service";
 
 type Cuerpo = Record<string, any>;
@@ -190,7 +190,8 @@ export class PlantillasDeCompraService {
 			} else {
 				porDisenar.push({
 					...comun,
-					porque: item.arteId || item.origen ? "sin_archivos" : "todavia_sin_diseno",
+					porque:
+						item.arteId || item.origen ? "sin_archivos" : "todavia_sin_diseno",
 				});
 			}
 		}
@@ -260,12 +261,16 @@ export class PlantillasDeCompraService {
 
 				const lado = limpio(a?.lado);
 				if (tipo !== "diseno" && !lado) {
-					throw new BadRequestException(`El archivo "${tipo}" no dice de qué lado es`);
+					throw new BadRequestException(
+						`El archivo "${tipo}" no dice de qué lado es`,
+					);
 				}
 
 				const ext = EXTENSION[tipo] ?? "png";
 				const llave =
-					tipo === "diseno" ? `${base}/diseno.json` : `${base}/${lado}-${tipo}.${ext}`;
+					tipo === "diseno"
+						? `${base}/diseno.json`
+						: `${base}/${lado}-${tipo}.${ext}`;
 
 				const { uploadUrl, url } = await this.almacen.urlParaMedios(
 					llave,
@@ -430,7 +435,9 @@ export class PlantillasDeCompraService {
 					size: String(t?.size ?? "").trim(),
 					piezas: Math.floor(Number(t?.piezas ?? 0)),
 				}))
-				.filter((t: { size: string; piezas: number }) => t.size && t.piezas > 0);
+				.filter(
+					(t: { size: string; piezas: number }) => t.size && t.piezas > 0,
+				);
 
 			if (tallas.length === 0) {
 				throw new BadRequestException(
@@ -458,7 +465,10 @@ export class PlantillasDeCompraService {
 				origenPartidaId: lineaId || null,
 				miniatura: String(crudo?.miniatura ?? "").trim() || null,
 				color: String(crudo?.colorPrenda ?? "").trim() || null,
-				nombre: String(crudo?.nombre ?? "").trim().slice(0, 120) || null,
+				nombre:
+					String(crudo?.nombre ?? "")
+						.trim()
+						.slice(0, 120) || null,
 				tallas,
 			};
 		});
@@ -493,7 +503,11 @@ export class PlantillasDeCompraService {
 					/* El origen sólo se guarda si el pedido y la partida existen de
 					   verdad: son claves foráneas, y una referencia inventada
 					   reventaría la escritura con un error de base de datos. */
-					origenPedidoId: await this.siExiste(tx, e.pedidos, item.origenPedidoId),
+					origenPedidoId: await this.siExiste(
+						tx,
+						e.pedidos,
+						item.origenPedidoId,
+					),
 					origenPartidaId: await this.siExiste(
 						tx,
 						e.pedidoPartidas,
@@ -533,7 +547,8 @@ export class PlantillasDeCompraService {
 
 	private async productosVivos(ids: string[]) {
 		const unicos = [...new Set(ids)];
-		if (unicos.length === 0) return new Map<string, { tallerId: string; nombre: string }>();
+		if (unicos.length === 0)
+			return new Map<string, { tallerId: string; nombre: string }>();
 
 		const filas = await this.db
 			.select({
@@ -546,7 +561,9 @@ export class PlantillasDeCompraService {
 				and(inArray(e.productos.id, unicos), eq(e.productos.estado, "activo")),
 			);
 
-		return new Map(filas.map((p) => [p.id, { tallerId: p.tallerId, nombre: p.nombre }]));
+		return new Map(
+			filas.map((p) => [p.id, { tallerId: p.tallerId, nombre: p.nombre }]),
+		);
 	}
 
 	private async suyaOFalla(quien: Identidad, id: string) {

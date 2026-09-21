@@ -10,11 +10,15 @@ import {
 	Req,
 	UseGuards,
 } from "@nestjs/common";
-import { GuardComprador, GuardTaller, type PeticionConIdentidad } from "../auth/auth.guard";
+import {
+	GuardComprador,
+	GuardTaller,
+	type PeticionConIdentidad,
+} from "../auth/auth.guard";
 import type { Identidad } from "../auth/cognito";
+import { PedidosService } from "./pedidos.service";
 import { PedidosCompradorService } from "./pedidos-comprador.service";
 import { PedidosTallerService } from "./pedidos-taller.service";
-import { PedidosService } from "./pedidos.service";
 
 /** La identidad que el guard ya dejó en la petición. */
 function quien(peticion: PeticionConIdentidad): Identidad {

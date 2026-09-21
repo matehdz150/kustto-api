@@ -1,4 +1,10 @@
-import { jsonb, numeric, pgTable, text, uniqueIndex } from "drizzle-orm/pg-core";
+import {
+	jsonb,
+	numeric,
+	pgTable,
+	text,
+	uniqueIndex,
+} from "drizzle-orm/pg-core";
 import { marcas } from "./comun";
 
 /**

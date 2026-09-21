@@ -3,12 +3,12 @@ import { NestFactory } from "@nestjs/core";
 import { Worker } from "bullmq";
 import type IORedis from "ioredis";
 import { AppModule } from "../app.module";
+import { type TrabajoDeBordado } from "../bordado/bordado.service";
+import { DigitalizadorService } from "../bordado/digitalizador.service";
 import { COLAS } from "../colas/colas";
 import { REDIS } from "../colas/colas.module";
 import { ENTORNO } from "../config/config.module";
 import type { Entorno } from "../config/entorno";
-import { type TrabajoDeBordado } from "../bordado/bordado.service";
-import { DigitalizadorService } from "../bordado/digitalizador.service";
 import { type Correo, CorreoService } from "../correo/correo.service";
 
 /**

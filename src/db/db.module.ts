@@ -1,4 +1,9 @@
-import { Global, Inject, Module, type OnApplicationShutdown } from "@nestjs/common";
+import {
+	Global,
+	Inject,
+	Module,
+	type OnApplicationShutdown,
+} from "@nestjs/common";
 import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import { ENTORNO } from "../config/config.module";

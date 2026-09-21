@@ -78,7 +78,9 @@ export class TalleresService {
 			);
 		}
 
-		const correo = String(cuerpo.email ?? "").trim().toLowerCase();
+		const correo = String(cuerpo.email ?? "")
+			.trim()
+			.toLowerCase();
 		const nombre = String(cuerpo.name ?? "").trim();
 
 		if (!CORREO.test(correo)) throw new BadRequestException("Correo inválido");
@@ -103,7 +105,9 @@ export class TalleresService {
 			)
 			.catch((error) => {
 				if ((error as { name?: string })?.name === "UsernameExistsException") {
-					throw new ConflictException(`Ya hay un taller con el correo ${correo}`);
+					throw new ConflictException(
+						`Ya hay un taller con el correo ${correo}`,
+					);
 				}
 				throw error;
 			});

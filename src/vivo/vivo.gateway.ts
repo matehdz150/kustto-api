@@ -8,10 +8,10 @@ import {
 } from "@nestjs/common";
 import IORedis from "ioredis";
 import { WebSocket, WebSocketServer } from "ws";
+import { verificar } from "../auth/cognito";
 import { REDIS } from "../colas/colas.module";
 import { ENTORNO } from "../config/config.module";
 import type { Entorno } from "../config/entorno";
-import { verificar } from "../auth/cognito";
 
 /** Cada cuánto se comprueba que la conexión sigue viva. */
 const LATIDO_MS = 30_000;

@@ -109,7 +109,9 @@ export class SkydropxClient {
 	}
 
 	get configurado() {
-		return Boolean(this.env.SKYDROPX_CLIENT_ID && this.env.SKYDROPX_CLIENT_SECRET);
+		return Boolean(
+			this.env.SKYDROPX_CLIENT_ID && this.env.SKYDROPX_CLIENT_SECRET,
+		);
 	}
 
 	/**
@@ -227,7 +229,9 @@ export class SkydropxClient {
 			if (!res.ok) {
 				/* El cuerpo de error trae el detalle por campo y es lo único que
 				   dice qué falta de verdad; al log entero, hacia fuera nada. */
-				this.log.error(`Skydropx ${res.status} en ${ruta}: ${JSON.stringify(dato)}`);
+				this.log.error(
+					`Skydropx ${res.status} en ${ruta}: ${JSON.stringify(dato)}`,
+				);
 
 				if (res.status === 429) {
 					throw new DemasiadasPeticiones("Skydropx está saturado ahora mismo");
@@ -267,7 +271,9 @@ export class SkydropxClient {
 	 * Mientras sea `false` hay que volver a consultar; las tarifas que ya estén
 	 * se devuelven igual, para poder ir pintando.
 	 */
-	async consultarCotizacion(id: string): Promise<{ lista: boolean; tarifas: Tarifa[] }> {
+	async consultarCotizacion(
+		id: string,
+	): Promise<{ lista: boolean; tarifas: Tarifa[] }> {
 		const dato = await this.llamar<{
 			is_completed: boolean;
 			rates: {
@@ -363,7 +369,10 @@ export class SkydropxClient {
 
 	/** Relee un envío ya creado. Es como aparece la etiqueta cuando esté lista. */
 	async consultarEnvio(envioId: string): Promise<Guia> {
-		return aGuia(envioId, await this.llamar<any>(`/api/v1/shipments/${envioId}`));
+		return aGuia(
+			envioId,
+			await this.llamar<any>(`/api/v1/shipments/${envioId}`),
+		);
 	}
 
 	/**
@@ -433,7 +442,8 @@ function aDireccionCompleta(d: Direccion & Contacto) {
 function aGuia(envioId: string, doc: any): Guia {
 	const a = doc?.data?.attributes ?? {};
 	const paquete =
-		(doc?.included ?? []).find((i: any) => i?.type === "package")?.attributes ?? {};
+		(doc?.included ?? []).find((i: any) => i?.type === "package")?.attributes ??
+		{};
 	const detalle = a.error_detail ?? null;
 
 	return {

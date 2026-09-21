@@ -10,7 +10,6 @@ import { DB, type Db } from "../db/db.module";
 import * as e from "../db/esquema";
 import { claveDeVariante } from "../pedidos/lineas";
 import {
-	type FotoReal,
 	validarFotosReales,
 	validarRecargos,
 	validarTecnicas,
@@ -354,9 +353,11 @@ export class ProductosTallerService {
 
 			for (const [orden, img] of h.images.entries()) {
 				if (!img?.url) continue;
-				await tx
-					.insert(e.productoImagenes)
-					.values({ productoId, url: String(img.url), orden: img.order ?? orden });
+				await tx.insert(e.productoImagenes).values({
+					productoId,
+					url: String(img.url),
+					orden: img.order ?? orden,
+				});
 			}
 		}
 
@@ -432,7 +433,8 @@ export class ProductosTallerService {
 			const valores = {
 				precioBase: Number(h.pricing.basePrice ?? 0).toFixed(2),
 				precioPorLado:
-					h.pricing.perSidePrice === undefined || h.pricing.perSidePrice === null
+					h.pricing.perSidePrice === undefined ||
+					h.pricing.perSidePrice === null
 						? null
 						: Number(h.pricing.perSidePrice).toFixed(2),
 			};
@@ -440,7 +442,10 @@ export class ProductosTallerService {
 			await tx
 				.insert(e.productoPrecios)
 				.values({ productoId, ...valores })
-				.onConflictDoUpdate({ target: e.productoPrecios.productoId, set: valores });
+				.onConflictDoUpdate({
+					target: e.productoPrecios.productoId,
+					set: valores,
+				});
 		}
 
 		if (h.production) {
@@ -536,18 +541,57 @@ export class ProductosTallerService {
 
 		const ids = filas.map((p) => p.id);
 
-		const [imagenes, colores, tallas, lados, precios, produccion, cats, exist, fotos] =
-			await Promise.all([
-				this.db.select().from(e.productoImagenes).where(inArray(e.productoImagenes.productoId, ids)).orderBy(asc(e.productoImagenes.orden)),
-				this.db.select().from(e.productoColores).where(inArray(e.productoColores.productoId, ids)),
-				this.db.select().from(e.productoTallas).where(inArray(e.productoTallas.productoId, ids)).orderBy(asc(e.productoTallas.orden)),
-				this.db.select().from(e.productoLados).where(inArray(e.productoLados.productoId, ids)),
-				this.db.select().from(e.productoPrecios).where(inArray(e.productoPrecios.productoId, ids)),
-				this.db.select().from(e.productoProduccion).where(inArray(e.productoProduccion.productoId, ids)),
-				this.db.select().from(e.productoCategorias).where(inArray(e.productoCategorias.productoId, ids)),
-				this.db.select().from(e.productoExistencias).where(inArray(e.productoExistencias.productoId, ids)),
-				this.db.select().from(e.productoFotosReales).where(inArray(e.productoFotosReales.productoId, ids)).orderBy(asc(e.productoFotosReales.orden)),
-			]);
+		const [
+			imagenes,
+			colores,
+			tallas,
+			lados,
+			precios,
+			produccion,
+			cats,
+			exist,
+			fotos,
+		] = await Promise.all([
+			this.db
+				.select()
+				.from(e.productoImagenes)
+				.where(inArray(e.productoImagenes.productoId, ids))
+				.orderBy(asc(e.productoImagenes.orden)),
+			this.db
+				.select()
+				.from(e.productoColores)
+				.where(inArray(e.productoColores.productoId, ids)),
+			this.db
+				.select()
+				.from(e.productoTallas)
+				.where(inArray(e.productoTallas.productoId, ids))
+				.orderBy(asc(e.productoTallas.orden)),
+			this.db
+				.select()
+				.from(e.productoLados)
+				.where(inArray(e.productoLados.productoId, ids)),
+			this.db
+				.select()
+				.from(e.productoPrecios)
+				.where(inArray(e.productoPrecios.productoId, ids)),
+			this.db
+				.select()
+				.from(e.productoProduccion)
+				.where(inArray(e.productoProduccion.productoId, ids)),
+			this.db
+				.select()
+				.from(e.productoCategorias)
+				.where(inArray(e.productoCategorias.productoId, ids)),
+			this.db
+				.select()
+				.from(e.productoExistencias)
+				.where(inArray(e.productoExistencias.productoId, ids)),
+			this.db
+				.select()
+				.from(e.productoFotosReales)
+				.where(inArray(e.productoFotosReales.productoId, ids))
+				.orderBy(asc(e.productoFotosReales.orden)),
+		]);
 
 		return filas.map((p) => {
 			const precio = precios.find((x) => x.productoId === p.id);
@@ -571,7 +615,9 @@ export class ProductosTallerService {
 				customizationRules: p.reglasPersonalizacion,
 				templateSides: p.ladosDePlantilla,
 				proveedorId: p.tallerId,
-				categoryIds: cats.filter((c) => c.productoId === p.id).map((c) => c.categoriaId),
+				categoryIds: cats
+					.filter((c) => c.productoId === p.id)
+					.map((c) => c.categoriaId),
 				images: imagenes
 					.filter((i) => i.productoId === p.id)
 					.map((i) => ({ url: i.url, order: i.orden })),

@@ -191,8 +191,10 @@ export const pedidoPartidas = pgTable(
 		/** La suma de las piezas de todas sus tallas. */
 		piezas: integer().notNull(),
 		/** Base más lo que suman los lados. Por pieza. */
-		precioUnitario: numeric("precio_unitario", { precision: 10, scale: 2 })
-			.notNull(),
+		precioUnitario: numeric("precio_unitario", {
+			precision: 10,
+			scale: 2,
+		}).notNull(),
 		importe: numeric({ precision: 12, scale: 2 }).notNull(),
 		/**
 		 * Dónde vive cada archivo de producción, por lado.

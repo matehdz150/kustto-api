@@ -94,9 +94,7 @@ export class RevisionService {
 				notaRevision: decision === "aprobar" ? null : nota,
 				actualizadoEn: new Date(),
 			})
-			.where(
-				and(eq(e.productos.id, id), eq(e.productos.estado, "en_revision")),
-			)
+			.where(and(eq(e.productos.id, id), eq(e.productos.estado, "en_revision")))
 			.returning();
 
 		if (!fila) {
@@ -133,7 +131,9 @@ export class RevisionService {
 				nombrePublico: e.talleres.nombrePublico,
 			})
 			.from(e.talleres)
-			.where(inArray(e.talleres.id, [...new Set(productos.map((p) => p.tallerId))]));
+			.where(
+				inArray(e.talleres.id, [...new Set(productos.map((p) => p.tallerId))]),
+			);
 
 		return productos.map((p) => {
 			const taller = talleres.find((t) => t.id === p.tallerId);

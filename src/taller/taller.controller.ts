@@ -42,7 +42,10 @@ export class TallerController {
 	}
 
 	@Patch("yo")
-	actualizarPerfil(@Req() p: PeticionConIdentidad, @Body() c: Record<string, unknown>) {
+	actualizarPerfil(
+		@Req() p: PeticionConIdentidad,
+		@Body() c: Record<string, unknown>,
+	) {
 		return this.taller.actualizar(quien(p), c);
 	}
 
@@ -59,7 +62,10 @@ export class TallerController {
 	}
 
 	@Post("subidas/foto")
-	firmarFoto(@Req() p: PeticionConIdentidad, @Body() c: Record<string, unknown>) {
+	firmarFoto(
+		@Req() p: PeticionConIdentidad,
+		@Body() c: Record<string, unknown>,
+	) {
 		return this.taller.urlParaFoto(quien(p), c);
 	}
 
@@ -79,7 +85,10 @@ export class TallerController {
 	}
 
 	@Post("productos")
-	crearProducto(@Req() p: PeticionConIdentidad, @Body() c: Record<string, unknown>) {
+	crearProducto(
+		@Req() p: PeticionConIdentidad,
+		@Body() c: Record<string, unknown>,
+	) {
 		return this.productos.crear(quien(p).sub, c);
 	}
 

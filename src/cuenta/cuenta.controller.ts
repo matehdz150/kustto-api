@@ -48,7 +48,10 @@ export class CuentaController {
 	}
 
 	@Patch("perfil")
-	guardarPerfil(@Req() p: PeticionConIdentidad, @Body() c: Record<string, unknown>) {
+	guardarPerfil(
+		@Req() p: PeticionConIdentidad,
+		@Body() c: Record<string, unknown>,
+	) {
 		return this.perfil.guardar(quien(p), c);
 	}
 
@@ -60,7 +63,10 @@ export class CuentaController {
 	}
 
 	@Patch("carrito")
-	guardarCarrito(@Req() p: PeticionConIdentidad, @Body() c: Record<string, unknown>) {
+	guardarCarrito(
+		@Req() p: PeticionConIdentidad,
+		@Body() c: Record<string, unknown>,
+	) {
 		return this.carrito.guardar(quien(p), c);
 	}
 
@@ -77,7 +83,10 @@ export class CuentaController {
 	}
 
 	@Patch("favoritos")
-	guardarFavoritos(@Req() p: PeticionConIdentidad, @Body() c: Record<string, unknown>) {
+	guardarFavoritos(
+		@Req() p: PeticionConIdentidad,
+		@Body() c: Record<string, unknown>,
+	) {
 		return this.favoritos.guardar(quien(p), c);
 	}
 
@@ -89,7 +98,10 @@ export class CuentaController {
 	}
 
 	@Post("disenos")
-	guardarDiseno(@Req() p: PeticionConIdentidad, @Body() c: Record<string, unknown>) {
+	guardarDiseno(
+		@Req() p: PeticionConIdentidad,
+		@Body() c: Record<string, unknown>,
+	) {
 		return this.disenos.guardar(quien(p), c);
 	}
 
@@ -115,12 +127,18 @@ export class CuentaController {
 	}
 
 	@Post("imagenes/subidas")
-	firmarImagen(@Req() p: PeticionConIdentidad, @Body() c: Record<string, unknown>) {
+	firmarImagen(
+		@Req() p: PeticionConIdentidad,
+		@Body() c: Record<string, unknown>,
+	) {
 		return this.imagenes.firmarSubida(quien(p), c);
 	}
 
 	@Post("imagenes")
-	confirmarImagen(@Req() p: PeticionConIdentidad, @Body() c: Record<string, unknown>) {
+	confirmarImagen(
+		@Req() p: PeticionConIdentidad,
+		@Body() c: Record<string, unknown>,
+	) {
 		return this.imagenes.confirmar(quien(p), c);
 	}
 
@@ -139,7 +157,10 @@ export class CuentaController {
 	}
 
 	@Post("plantillas")
-	crearPlantilla(@Req() p: PeticionConIdentidad, @Body() c: Record<string, unknown>) {
+	crearPlantilla(
+		@Req() p: PeticionConIdentidad,
+		@Body() c: Record<string, unknown>,
+	) {
 		return this.plantillas.crear(quien(p), c);
 	}
 
@@ -153,7 +174,10 @@ export class CuentaController {
 	 * arriba cuesta nada.
 	 */
 	@Post("plantillas/subidas")
-	firmarSubidas(@Req() p: PeticionConIdentidad, @Body() c: Record<string, unknown>) {
+	firmarSubidas(
+		@Req() p: PeticionConIdentidad,
+		@Body() c: Record<string, unknown>,
+	) {
 		return this.plantillas.firmarSubidas(quien(p), c);
 	}
 

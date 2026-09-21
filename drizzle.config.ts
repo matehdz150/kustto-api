@@ -11,7 +11,9 @@ export default defineConfig({
 	out: "./migraciones",
 	dialect: "postgresql",
 	dbCredentials: {
-		url: process.env.DATABASE_URL ?? "postgres://kustto:kustto@localhost:5432/kustto",
+		url:
+			process.env.DATABASE_URL ??
+			"postgres://kustto:kustto@localhost:5432/kustto",
 	},
 	casing: "snake_case",
 });

@@ -9,12 +9,12 @@
 import { createHmac } from "node:crypto";
 import { isDeepStrictEqual } from "node:util";
 import { NestFactory } from "@nestjs/core";
+import type { Queue } from "bullmq";
 import { eq } from "drizzle-orm";
 import type IORedis from "ioredis";
 import { AppModule } from "../src/app.module";
 import { COLAS } from "../src/colas/colas";
 import { COLA, REDIS } from "../src/colas/colas.module";
-import type { Queue } from "bullmq";
 import { CarritoService } from "../src/cuenta/carrito.service";
 import { FavoritosService } from "../src/cuenta/favoritos.service";
 import { PerfilService } from "../src/cuenta/perfil.service";
@@ -28,11 +28,17 @@ import { PedidosService } from "../src/pedidos/pedidos.service";
 let fallos = 0;
 
 function comprobar(que: string, bien: boolean, detalle = "") {
-	console.log(`  ${bien ? "ok  " : "FALLA"}  ${que}${detalle ? ` — ${detalle}` : ""}`);
+	console.log(
+		`  ${bien ? "ok  " : "FALLA"}  ${que}${detalle ? ` — ${detalle}` : ""}`,
+	);
 	if (!bien) fallos++;
 }
 
-async function falla(que: string, fn: () => Promise<unknown>, esperado: string) {
+async function falla(
+	que: string,
+	fn: () => Promise<unknown>,
+	esperado: string,
+) {
 	try {
 		await fn();
 		comprobar(que, false, "no lanzó");
@@ -122,7 +128,13 @@ async function principal() {
 			peticion: { skydropxId: "falsa" },
 			respuesta: {
 				tarifas: [
-					{ id: "tarifa-1", paqueteria: "Paquetexpress", servicio: "Express", precio: 149.5, dias: 3 },
+					{
+						id: "tarifa-1",
+						paqueteria: "Paquetexpress",
+						servicio: "Express",
+						precio: 149.5,
+						dias: 3,
+					},
 				],
 			},
 			expiraEn: new Date(Date.now() + 3_600_000),
@@ -141,7 +153,11 @@ async function principal() {
 
 	await falla(
 		"una tarifa inventada se rechaza",
-		() => envios.envioDelPedido({ cotizacionId: cotizacion.id, tarifaId: "no-existe" }),
+		() =>
+			envios.envioDelPedido({
+				cotizacionId: cotizacion.id,
+				tarifaId: "no-existe",
+			}),
 		"ya no está disponible",
 	);
 
@@ -150,7 +166,11 @@ async function principal() {
 		.values({
 			estado: "lista",
 			peticion: {},
-			respuesta: { tarifas: [{ id: "t", paqueteria: "x", servicio: "y", precio: 1, dias: 1 }] },
+			respuesta: {
+				tarifas: [
+					{ id: "t", paqueteria: "x", servicio: "y", precio: 1, dias: 1 },
+				],
+			},
 			expiraEn: new Date(Date.now() - 1000),
 		})
 		.returning();
@@ -166,7 +186,11 @@ async function principal() {
 	await colaCorreo.drain();
 
 	const compra = await pedidos.crear({
-		comprador: { nombre: "Prueba", email: quien.correo, whatsapp: "3312345678" },
+		comprador: {
+			nombre: "Prueba",
+			email: quien.correo,
+			whatsapp: "3312345678",
+		},
 		entrega: {
 			metodo: "envio",
 			direccion: {
@@ -201,16 +225,21 @@ async function principal() {
 	);
 	comprobar(
 		"el total suma producto + envío",
-		Number(pedidoCreado.total) ===
-			Number(pedidoCreado.productosTotal) + 149.5,
+		Number(pedidoCreado.total) === Number(pedidoCreado.productosTotal) + 149.5,
 		`${pedidoCreado.productosTotal} + 149.5 = ${pedidoCreado.total}`,
 	);
 
-	const encolados = await colaCorreo.getJobs(["waiting", "delayed", "active", "completed"]);
+	const encolados = await colaCorreo.getJobs([
+		"waiting",
+		"delayed",
+		"active",
+		"completed",
+	]);
 	const nombres = encolados.map((j) => j.name).sort();
 	comprobar(
 		"se encolan el correo del comprador y el del taller",
-		nombres.includes("pedido-recibido") && nombres.includes("pedido-para-taller"),
+		nombres.includes("pedido-recibido") &&
+			nombres.includes("pedido-para-taller"),
 		nombres.join(", "),
 	);
 	const alComprador = encolados.find((j) => j.name === "pedido-recibido");
@@ -244,7 +273,12 @@ async function principal() {
 
 	await falla(
 		"sin firma se rechaza",
-		() => rastreo.recibir(aviso("in_transit"), JSON.stringify(aviso("in_transit")), undefined),
+		() =>
+			rastreo.recibir(
+				aviso("in_transit"),
+				JSON.stringify(aviso("in_transit")),
+				undefined,
+			),
 		"Unauthorized",
 	);
 	await falla(
@@ -268,7 +302,10 @@ async function principal() {
 		.select()
 		.from(e.pedidos)
 		.where(eq(e.pedidos.id, pedidoCreado.id));
-	comprobar("`in_transit` lleva el pedido a enviado", trasEnviar.estado === "enviado");
+	comprobar(
+		"`in_transit` lleva el pedido a enviado",
+		trasEnviar.estado === "enviado",
+	);
 
 	/* Y ahora uno VIEJO que llega tarde: no debe retroceder. */
 	await rastreo.recibir(
@@ -285,7 +322,10 @@ async function principal() {
 		.select()
 		.from(e.pedidos)
 		.where(eq(e.pedidos.id, pedidoCreado.id));
-	comprobar("`delivered` lo lleva a entregado", trasEntregar.estado === "entregado");
+	comprobar(
+		"`delivered` lo lleva a entregado",
+		trasEntregar.estado === "entregado",
+	);
 
 	await rastreo.recibir(
 		aviso("in_transit"),
@@ -338,7 +378,11 @@ async function principal() {
 	const guardado = await carrito.guardar(quien, {
 		articulos: [
 			articulo,
-			{ ...articulo, carritoId: crypto.randomUUID(), productoId: "00000000-0000-4000-8000-000000000000" },
+			{
+				...articulo,
+				carritoId: crypto.randomUUID(),
+				productoId: "00000000-0000-4000-8000-000000000000",
+			},
 		],
 	});
 	comprobar(
@@ -356,22 +400,30 @@ async function principal() {
 		"no admite más de 30 artículos",
 		() =>
 			carrito.guardar(quien, {
-				articulos: Array.from({ length: 31 }, () => ({ productoId: producto.id })),
+				articulos: Array.from({ length: 31 }, () => ({
+					productoId: producto.id,
+				})),
 			}),
 		"no admite más de 30",
 	);
 
 	const otro = { ...articulo, carritoId: crypto.randomUUID(), agregadoEn: 2 };
-	const reemplazado = await carrito.guardar(quien, { articulos: [otro, articulo] });
+	const reemplazado = await carrito.guardar(quien, {
+		articulos: [otro, articulo],
+	});
 	comprobar(
 		"guardar reemplaza, no acumula, y respeta el orden",
 		reemplazado.articulos.length === 2 &&
-			(reemplazado.articulos[0] as { carritoId: string }).carritoId === otro.carritoId,
+			(reemplazado.articulos[0] as { carritoId: string }).carritoId ===
+				otro.carritoId,
 		`${reemplazado.articulos.length} artículos`,
 	);
 
 	await carrito.vaciar(quien);
-	comprobar("vaciar lo deja vacío", (await carrito.obtener(quien)).articulos.length === 0);
+	comprobar(
+		"vaciar lo deja vacío",
+		(await carrito.obtener(quien)).articulos.length === 0,
+	);
 
 	/* ─── 6. Perfil y favoritos ───────────────────────────────────────── */
 	console.log("\n6. Perfil y favoritos");
@@ -384,7 +436,11 @@ async function principal() {
 
 	await falla(
 		"un CP mal escrito se rechaza aunque sea un borrador",
-		() => perfil.guardar(quien, { nombre: "Prueba", direccion: { calle: "x", colonia: "y", ciudad: "z", cp: "441" } }),
+		() =>
+			perfil.guardar(quien, {
+				nombre: "Prueba",
+				direccion: { calle: "x", colonia: "y", ciudad: "z", cp: "441" },
+			}),
 		"cinco dígitos",
 	);
 

@@ -42,7 +42,9 @@ const interruptor = (porDefecto: boolean) =>
 		.transform((v) => v === "true" || v === "1" || v === "si");
 
 const esquema = z.object({
-	NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
+	NODE_ENV: z
+		.enum(["development", "production", "test"])
+		.default("development"),
 	PORT: z.coerce.number().default(8000),
 
 	DATABASE_URL: z.string().url(),

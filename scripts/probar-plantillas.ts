@@ -8,21 +8,27 @@
  */
 import { NestFactory } from "@nestjs/core";
 import { eq } from "drizzle-orm";
-import { AppModule } from "../src/app.module";
 import { AlmacenService } from "../src/almacen/almacen.service";
-import { PlantillasDeCompraService } from "../src/cuenta/plantillas.service";
+import { AppModule } from "../src/app.module";
 import { PerfilService } from "../src/cuenta/perfil.service";
+import { PlantillasDeCompraService } from "../src/cuenta/plantillas.service";
 import { DB, type Db } from "../src/db/db.module";
 import * as e from "../src/db/esquema";
 
 let fallos = 0;
 
 function comprobar(que: string, bien: boolean, detalle = "") {
-	console.log(`  ${bien ? "ok  " : "FALLA"}  ${que}${detalle ? ` — ${detalle}` : ""}`);
+	console.log(
+		`  ${bien ? "ok  " : "FALLA"}  ${que}${detalle ? ` — ${detalle}` : ""}`,
+	);
 	if (!bien) fallos++;
 }
 
-async function falla(que: string, fn: () => Promise<unknown>, esperado: string) {
+async function falla(
+	que: string,
+	fn: () => Promise<unknown>,
+	esperado: string,
+) {
 	try {
 		await fn();
 		comprobar(que, false, "no lanzó");
@@ -66,7 +72,10 @@ async function principal() {
 		productoId: producto.id,
 		nombre: producto.nombre,
 		colorPrenda: "Negro",
-		tallas: [{ size: "S", piezas: 2 }, { size: "M", piezas: 3 }],
+		tallas: [
+			{ size: "S", piezas: 2 },
+			{ size: "M", piezas: 3 },
+		],
 		...extra,
 	});
 
@@ -85,7 +94,8 @@ async function principal() {
 	);
 	await falla(
 		"sin cantidades se rechaza",
-		() => plantillas.crear(quien, { nombre: "X", items: [item({ tallas: [] })] }),
+		() =>
+			plantillas.crear(quien, { nombre: "X", items: [item({ tallas: [] })] }),
 		"le faltan las cantidades",
 	);
 	await falla(
@@ -140,7 +150,11 @@ async function principal() {
 	const otro = { ...quien, sub: `otro-${Date.now()}` };
 	await falla(
 		"la plantilla de otra persona no se abre",
-		() => plantillas.actualizar(otro, creada.id, { nombre: "mía", items: [item()] }),
+		() =>
+			plantillas.actualizar(otro, creada.id, {
+				nombre: "mía",
+				items: [item()],
+			}),
 		"No encontramos esa plantilla",
 	);
 	await falla(
@@ -204,7 +218,10 @@ async function principal() {
 	for (const s of firmadas.subidas) {
 		const res = await fetch(s.uploadUrl, {
 			method: "PUT",
-			headers: { "content-type": "image/png", "content-length": String(PNG.length) },
+			headers: {
+				"content-type": "image/png",
+				"content-length": String(PNG.length),
+			},
 			body: PNG,
 		});
 		if (!res.ok) throw new Error(`No se pudo subir a S3: ${res.status}`);
@@ -251,8 +268,14 @@ async function principal() {
 
 	/* El arte llegó de verdad al prefijo del carrito. */
 	const copiado = await almacen
-		.leer("publico", `carritos/${cargada.articulos[0].carritoId}/front-arte.png`)
-		.then(() => true, () => false);
+		.leer(
+			"publico",
+			`carritos/${cargada.articulos[0].carritoId}/front-arte.png`,
+		)
+		.then(
+			() => true,
+			() => false,
+		);
 	comprobar("el arte está copiado en S3, no sólo apuntado", copiado);
 
 	const sinArte = await plantillas.alCarrito(quien, creada.id);
@@ -299,8 +322,12 @@ async function principal() {
 	for (const s of firmadas.subidas) {
 		await almacen.borrar(s.url.replace(/^\//, ""));
 	}
-	await almacen.borrar(`carritos/${cargada.articulos[0].carritoId}/front-arte.png`);
-	await almacen.borrar(`carritos/${cargada.articulos[0].carritoId}/front-colocacion.png`);
+	await almacen.borrar(
+		`carritos/${cargada.articulos[0].carritoId}/front-arte.png`,
+	);
+	await almacen.borrar(
+		`carritos/${cargada.articulos[0].carritoId}/front-colocacion.png`,
+	);
 
 	console.log(`\n${fallos === 0 ? "TODO BIEN" : `${fallos} FALLOS`}\n`);
 	await app.close();

@@ -1,0 +1,41 @@
+{
+	"$schema": "https://biomejs.dev/schemas/2.5.14/schema.json",
+	// Respeta el .gitignore: sin esto Biome revisaba `dist/` y `dist-scripts/`.
+	"vcs": {
+		"enabled": true,
+		"clientKind": "git",
+		"useIgnoreFile": true
+	},
+	"files": {
+		"ignoreUnknown": true,
+		// Las instantáneas de drizzle-kit las escribe la herramienta, no nosotros.
+		"includes": ["**", "!migraciones/meta"]
+	},
+	"formatter": {
+		"enabled": true,
+		"indentStyle": "tab"
+	},
+	"javascript": {
+		"parser": {
+			// Nest inyecta por decoradores en los parámetros del constructor
+			// (`@Inject(DB) private readonly db`). Sin esto Biome no los parsea.
+			"unsafeParameterDecoratorsEnabled": true
+		}
+	},
+	"linter": {
+		"enabled": true,
+		"rules": {
+			"style": {
+				// APAGADA A PROPÓSITO: su arreglo cambia `import { X }` por
+				// `import type { X }`, y en una clase que Nest inyecta por el
+				// constructor eso ROMPE la inyección —`emitDecoratorMetadata`
+				// necesita la clase en tiempo de ejecución— y la API no arranca.
+				// Biome no sabe que un tipo de parámetro decorado se usa como valor.
+				"useImportType": "off"
+			}
+		}
+	},
+	"assist": {
+		"enabled": true
+	}
+}

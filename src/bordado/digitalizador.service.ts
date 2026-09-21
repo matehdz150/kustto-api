@@ -76,7 +76,9 @@ export class DigitalizadorService {
 		   canceló. No es un error, es que no había nada que hacer. */
 		if (!trabajo) return { tomado: false };
 
-		const carpeta = await mkdtemp(join(tmpdir(), `bordado-${jobId.slice(-12)}-`));
+		const carpeta = await mkdtemp(
+			join(tmpdir(), `bordado-${jobId.slice(-12)}-`),
+		);
 		const arranque = Date.now();
 
 		try {
@@ -96,7 +98,9 @@ export class DigitalizadorService {
 			const codigo = this.codigoDe(error);
 			await this.fallar(jobId, codigo);
 
-			this.log.error(`FAILED ${jobId}: ${codigo} — ${(error as Error).message}`);
+			this.log.error(
+				`FAILED ${jobId}: ${codigo} — ${(error as Error).message}`,
+			);
 			throw error;
 		} finally {
 			await rm(carpeta, { recursive: true, force: true });
@@ -205,9 +209,13 @@ export class DigitalizadorService {
 							/* El motor escribe su motivo en la última línea del error
 							   cuando lo sabe. Si no, es un fallo genérico. */
 							const ultima = errores.trim().split("\n").at(-1) ?? "";
-							const conocido = /^[A-Z_]+$/.test(ultima) ? ultima : "WORKER_FAILED";
+							const conocido = /^[A-Z_]+$/.test(ultima)
+								? ultima
+								: "WORKER_FAILED";
 
-							this.log.error(`El motor salió con ${codigo}: ${errores.slice(-500)}`);
+							this.log.error(
+								`El motor salió con ${codigo}: ${errores.slice(-500)}`,
+							);
 							rechazar(new Error(conocido));
 							return;
 						}
@@ -243,7 +251,9 @@ export class DigitalizadorService {
 		const prefijo = `embroidery/${trabajo.disenoHash}/${trabajo.id}`;
 		const claves: Record<string, string> = {};
 
-		for (const tipo of Object.keys(NOMBRES) as (keyof Resultado["artifacts"])[]) {
+		for (const tipo of Object.keys(
+			NOMBRES,
+		) as (keyof Resultado["artifacts"])[]) {
 			const ruta = resultado.artifacts[tipo];
 			if (!ruta) continue;
 
@@ -251,7 +261,8 @@ export class DigitalizadorService {
 			const esperado = resultado.hashes[tipo];
 			const real = createHash("sha256").update(cuerpo).digest("hex");
 
-			if (esperado && esperado !== real) throw new Error("ARTIFACT_HASH_MISMATCH");
+			if (esperado && esperado !== real)
+				throw new Error("ARTIFACT_HASH_MISMATCH");
 
 			const clave = `${prefijo}/${NOMBRES[tipo]}`;
 			await this.almacen.subirArchivo(clave, cuerpo, TIPOS[tipo], real);

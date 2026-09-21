@@ -355,7 +355,5 @@ export const productoFotosReales = pgTable(
 		banda: jsonb(),
 		orden: integer().notNull().default(0),
 	},
-	(t) => [
-		index("producto_fotos_reales_producto").on(t.productoId, t.orden),
-	],
+	(t) => [index("producto_fotos_reales_producto").on(t.productoId, t.orden)],
 );

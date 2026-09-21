@@ -11,8 +11,8 @@ import {
 } from "@nestjs/common";
 import { GuardComprador, type PeticionConIdentidad } from "../auth/auth.guard";
 import type { Identidad } from "../auth/cognito";
-import { EventosPublicoService } from "./eventos-publico.service";
 import { EventosService } from "./eventos.service";
+import { EventosPublicoService } from "./eventos-publico.service";
 
 function quien(peticion: PeticionConIdentidad): Identidad {
 	return peticion.identidad!;
@@ -40,7 +40,10 @@ export class EventosController {
 
 	/** Antes que las rutas con `:id`, por lo mismo que `plantillas/subidas`. */
 	@Post("subidas")
-	firmarFoto(@Req() p: PeticionConIdentidad, @Body() c: Record<string, unknown>) {
+	firmarFoto(
+		@Req() p: PeticionConIdentidad,
+		@Body() c: Record<string, unknown>,
+	) {
 		return this.eventos.firmarFoto(quien(p), c);
 	}
 
@@ -95,12 +98,18 @@ export class EventosPublicoController {
 	}
 
 	@Post(":codigo/subidas")
-	firmarSubidas(@Param("codigo") codigo: string, @Body() c: Record<string, unknown>) {
+	firmarSubidas(
+		@Param("codigo") codigo: string,
+		@Body() c: Record<string, unknown>,
+	) {
 		return this.eventos.firmarSubidas(codigo, c);
 	}
 
 	@Post(":codigo/participaciones")
-	participar(@Param("codigo") codigo: string, @Body() c: Record<string, unknown>) {
+	participar(
+		@Param("codigo") codigo: string,
+		@Body() c: Record<string, unknown>,
+	) {
 		return this.eventos.participar(codigo, c);
 	}
 }

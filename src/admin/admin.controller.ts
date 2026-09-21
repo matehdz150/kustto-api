@@ -67,7 +67,10 @@ export class AdminController {
 	}
 
 	@Patch("templates/:id")
-	actualizarPlantilla(@Param("id") id: string, @Body() c: Record<string, unknown>) {
+	actualizarPlantilla(
+		@Param("id") id: string,
+		@Body() c: Record<string, unknown>,
+	) {
 		return this.plantillas.actualizar(id, c);
 	}
 

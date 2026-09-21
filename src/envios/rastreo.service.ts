@@ -1,16 +1,21 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
-import { Inject, Injectable, Logger, UnauthorizedException } from "@nestjs/common";
+import {
+	Inject,
+	Injectable,
+	Logger,
+	UnauthorizedException,
+} from "@nestjs/common";
+import type { Queue } from "bullmq";
 import { eq } from "drizzle-orm";
 import { AvisosService } from "../avisos/avisos.service";
 import { COLAS } from "../colas/colas";
 import { COLA } from "../colas/colas.module";
-import type { Queue } from "bullmq";
 import { ENTORNO } from "../config/config.module";
 import type { Entorno } from "../config/entorno";
-import { DB, type Db } from "../db/db.module";
-import * as e from "../db/esquema";
 import type { Correo } from "../correo/correo.service";
 import { pedidoEntregado, pedidoEnviado } from "../correo/plantillas";
+import { DB, type Db } from "../db/db.module";
+import * as e from "../db/esquema";
 
 type Estado = (typeof e.estadoPedido.enumValues)[number];
 
@@ -51,7 +56,13 @@ const PROBLEMAS = new Set([
  * bitácora contaría una historia falsa, que es justo lo que la máquina de
  * estados existe para evitar.
  */
-const ORDEN: Estado[] = ["nuevo", "produccion", "listo", "enviado", "entregado"];
+const ORDEN: Estado[] = [
+	"nuevo",
+	"produccion",
+	"listo",
+	"enviado",
+	"entregado",
+];
 
 /**
  * El webhook de la paquetería.
@@ -102,7 +113,9 @@ export class RastreoService {
 		   `In_transit` y `Picked_up`, y si el aviso llegara con esa forma la
 		   tabla de arriba no lo reconocería: el pedido no avanzaría y no habría
 		   error a la vista. Normalizar quita una clase entera de fallo mudo. */
-		const estadoSkydropx = String(atributos.status ?? atributos.tracking_status ?? "")
+		const estadoSkydropx = String(
+			atributos.status ?? atributos.tracking_status ?? "",
+		)
 			.trim()
 			.toLowerCase();
 
@@ -114,7 +127,9 @@ export class RastreoService {
 		if (!envioId || !estadoSkydropx) {
 			/* Un aviso que no entendemos no es un error de Skydropx ni nuestro: se
 			   contesta 200 para que no lo reintente eternamente, y al log entero. */
-			this.log.warn(`Aviso de rastreo sin envío o sin estado: ${crudo?.slice(0, 400)}`);
+			this.log.warn(
+				`Aviso de rastreo sin envío o sin estado: ${crudo?.slice(0, 400)}`,
+			);
 			return { ok: true, ignorado: true };
 		}
 
@@ -274,11 +289,16 @@ export class RastreoService {
 	 * SIN SECRETO SE RECHAZA. Una ruta que un tercero puede llamar y que mueve
 	 * pedidos no puede quedarse abierta porque falte una variable de entorno.
 	 */
-	private verificarFirma(crudo: string | undefined, cabecera: string | undefined) {
+	private verificarFirma(
+		crudo: string | undefined,
+		cabecera: string | undefined,
+	) {
 		const secreto = this.env.SKYDROPX_WEBHOOK_SECRETO;
 
 		if (!secreto) {
-			this.log.error("Webhook de rastreo sin SKYDROPX_WEBHOOK_SECRETO: rechazado");
+			this.log.error(
+				"Webhook de rastreo sin SKYDROPX_WEBHOOK_SECRETO: rechazado",
+			);
 			throw new UnauthorizedException();
 		}
 

@@ -214,7 +214,9 @@ function validar(cuerpo: Record<string, unknown>) {
 			throw new BadRequestException(`El lado "${lado}" no tiene mockup`);
 		}
 		if (!data.editableAreas?.[lado]?.length) {
-			throw new BadRequestException(`El lado "${lado}" no tiene área imprimible`);
+			throw new BadRequestException(
+				`El lado "${lado}" no tiene área imprimible`,
+			);
 		}
 	}
 

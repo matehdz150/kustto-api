@@ -9,7 +9,6 @@ import {
 import { and, eq, sql } from "drizzle-orm";
 import { DB, type Db } from "../db/db.module";
 import * as e from "../db/esquema";
-import { armarPaquete } from "./envios.service";
 import {
 	type Contacto,
 	type Direccion,
@@ -50,7 +49,11 @@ export class GuiasService {
 	 * registrara desde ahora, cuando existan las liquidaciones no habría nada
 	 * que cobrar hacia atrás.
 	 */
-	async comprar(tallerId: string, pedidoId: string, cuerpo: Record<string, any>) {
+	async comprar(
+		tallerId: string,
+		pedidoId: string,
+		cuerpo: Record<string, any>,
+	) {
 		const pedido = await this.suyoOFalla(tallerId, pedidoId);
 
 		if (pedido.metodoEntrega !== "envio") {
@@ -87,7 +90,9 @@ export class GuiasService {
 
 		const paquete = leerPaquete(cuerpo);
 		const taller = await this.tallerOFalla(tallerId);
-		const destino = comoDireccion(pedido.direccion as Record<string, any> | null);
+		const destino = comoDireccion(
+			pedido.direccion as Record<string, any> | null,
+		);
 
 		// 1 · Recotizar con lo que se midió de verdad.
 		const cotizacionId = await this.skydropx.cotizar(

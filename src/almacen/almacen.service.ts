@@ -201,7 +201,10 @@ export class AlmacenService {
 	async existe(clave: string) {
 		try {
 			await this.s3.send(
-				new HeadObjectCommand({ Bucket: this.env.S3_BUCKET_PUBLICO, Key: clave }),
+				new HeadObjectCommand({
+					Bucket: this.env.S3_BUCKET_PUBLICO,
+					Key: clave,
+				}),
 			);
 			return true;
 		} catch {
@@ -224,7 +227,9 @@ export class AlmacenService {
 	/** Leer un objeto para servirlo desde nuestro origen. Ver el comentario de arriba. */
 	async leer(bucket: "publico" | "privado", clave: string) {
 		const nombre =
-			bucket === "publico" ? this.env.S3_BUCKET_PUBLICO : this.env.S3_BUCKET_PRIVADO;
+			bucket === "publico"
+				? this.env.S3_BUCKET_PUBLICO
+				: this.env.S3_BUCKET_PRIVADO;
 
 		const salida = await this.s3.send(
 			new GetObjectCommand({ Bucket: nombre, Key: clave }),

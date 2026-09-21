@@ -6,8 +6,8 @@ import {
 	Logger,
 	NotFoundException,
 } from "@nestjs/common";
-import { and, desc, eq, sql } from "drizzle-orm";
 import type { Queue } from "bullmq";
+import { and, desc, eq } from "drizzle-orm";
 import { AvisosService } from "../avisos/avisos.service";
 import { COLAS } from "../colas/colas";
 import { COLA } from "../colas/colas.module";
@@ -105,7 +105,11 @@ export class PedidosTallerService {
 	 * En DynamoDB era una `ConditionExpression`; aquí es el `WHERE estado =
 	 * :actual` del UPDATE. Si no devuelve fila, alguien se adelantó.
 	 */
-	async cambiarEstado(tallerId: string, id: string, cuerpo: Record<string, any>) {
+	async cambiarEstado(
+		tallerId: string,
+		id: string,
+		cuerpo: Record<string, any>,
+	) {
 		const destino = String(cuerpo?.estado ?? "") as Estado;
 		const nota = String(cuerpo?.nota ?? "").trim() || null;
 

@@ -12,8 +12,8 @@ import {
 	uuid,
 } from "drizzle-orm/pg-core";
 import { productos } from "./catalogo";
-import { pedidoPartidas, pedidos } from "./pedidos";
 import { estadoEvento, marcas, personalizacionEvento } from "./comun";
+import { pedidoPartidas, pedidos } from "./pedidos";
 
 /**
  * El comprador con cuenta.
@@ -157,7 +157,9 @@ export const imagenesDeComprador = pgTable(
 		alto: integer(),
 		...marcas,
 	},
-	(t) => [index("imagenes_de_comprador_comprador").on(t.compradorId, t.creadoEn)],
+	(t) => [
+		index("imagenes_de_comprador_comprador").on(t.compradorId, t.creadoEn),
+	],
 );
 
 /**
@@ -186,7 +188,9 @@ export const plantillasDeCompra = pgTable(
 		ultimaVez: timestamp("ultima_vez", { withTimezone: true }),
 		...marcas,
 	},
-	(t) => [index("plantillas_de_compra_comprador").on(t.compradorId, t.creadoEn)],
+	(t) => [
+		index("plantillas_de_compra_comprador").on(t.compradorId, t.creadoEn),
+	],
 );
 
 /**

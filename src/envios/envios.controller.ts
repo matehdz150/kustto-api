@@ -57,7 +57,11 @@ export class EnviosPublicoController {
 		@Body() cuerpo: Record<string, unknown>,
 		@Headers("authorization") autorizacion?: string,
 	) {
-		return this.rastreo.recibir(cuerpo, peticion.rawBody?.toString("utf8"), autorizacion);
+		return this.rastreo.recibir(
+			cuerpo,
+			peticion.rawBody?.toString("utf8"),
+			autorizacion,
+		);
 	}
 }
 

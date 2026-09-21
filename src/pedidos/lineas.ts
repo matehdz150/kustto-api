@@ -172,7 +172,9 @@ export function aPartida(
 	producto: ProductoParaPedir,
 	pedidoId: string,
 ): Partida {
-	const tallas: TallaPedida[] = (Array.isArray(linea.tallas) ? linea.tallas : [])
+	const tallas: TallaPedida[] = (
+		Array.isArray(linea.tallas) ? linea.tallas : []
+	)
 		.map((t: any) => ({
 			size: String(t?.size ?? "").trim(),
 			piezas: Math.trunc(Number(t?.piezas ?? 0)),
@@ -205,7 +207,8 @@ export function aPartida(
 	/* El nombre del color solo no basta para comprar el blanco ni para decidir
 	   la subbase: "Negro" no le dice a nadie qué tono. Se copia el hex. */
 	const color = String(linea.colorPrenda ?? "").trim() || null;
-	const colorHex = producto.colores.find((c) => c.nombre === color)?.hex ?? null;
+	const colorHex =
+		producto.colores.find((c) => c.nombre === color)?.hex ?? null;
 
 	const precioUnitario = aPesos(producto.precioBase + extra);
 

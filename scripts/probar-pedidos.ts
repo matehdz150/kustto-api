@@ -13,18 +13,24 @@ import { eq } from "drizzle-orm";
 import { AppModule } from "../src/app.module";
 import { DB, type Db } from "../src/db/db.module";
 import * as e from "../src/db/esquema";
+import { PedidosService } from "../src/pedidos/pedidos.service";
 import { PedidosCompradorService } from "../src/pedidos/pedidos-comprador.service";
 import { PedidosTallerService } from "../src/pedidos/pedidos-taller.service";
-import { PedidosService } from "../src/pedidos/pedidos.service";
 
 let fallos = 0;
 
 function comprobar(que: string, bien: boolean, detalle = "") {
-	console.log(`  ${bien ? "ok  " : "FALLA"}  ${que}${detalle ? ` — ${detalle}` : ""}`);
+	console.log(
+		`  ${bien ? "ok  " : "FALLA"}  ${que}${detalle ? ` — ${detalle}` : ""}`,
+	);
 	if (!bien) fallos++;
 }
 
-async function falla(que: string, fn: () => Promise<unknown>, esperado: string) {
+async function falla(
+	que: string,
+	fn: () => Promise<unknown>,
+	esperado: string,
+) {
 	try {
 		await fn();
 		comprobar(que, false, "no lanzó");
@@ -120,7 +126,10 @@ async function principal() {
 	const entregado = await taller.cambiarEstado(tallerId, pedidoId, {
 		estado: "entregado",
 	});
-	comprobar("con `recoger`, listo -> entregado", entregado.estado === "entregado");
+	comprobar(
+		"con `recoger`, listo -> entregado",
+		entregado.estado === "entregado",
+	);
 
 	await falla(
 		"un pedido entregado ya no se mueve",

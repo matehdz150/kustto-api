@@ -100,11 +100,7 @@ const P = `margin:0 0 14px;font-size:15px;line-height:24px;color:${SUAVE};`;
  * y lo que hace que el correo se reconozca antes de leerlo; en oscuro, un
  * logotipo claro sobre fondo oscuro se pierde entre el resto del texto.
  */
-function envoltorio(
-	titulo: string,
-	preheader: string,
-	cuerpo: string,
-): string {
+function envoltorio(titulo: string, preheader: string, cuerpo: string): string {
 	return `<!doctype html>
 <html lang="es"><head>
 <meta charset="utf-8">
@@ -498,7 +494,11 @@ export function pedidoListo(datos: {
 				: `Hola ${esc(datos.nombre)}, el taller terminó y ahora pasa a la paquetería.`,
 		) +
 			(recoge && datos.taller
-				? destacado("Recógelo en", esc(datos.taller), esc(datos.direccion ?? ""))
+				? destacado(
+						"Recógelo en",
+						esc(datos.taller),
+						esc(datos.direccion ?? ""),
+					)
 				: destacado("Tu folio", `#${esc(datos.folio)}`)) +
 			progreso(2, recoge) +
 			ficha(filas, esc(datos.producto)) +
@@ -631,10 +631,7 @@ export function pedidoEntregado(datos: {
 			}.`,
 		) +
 			progreso(3, recogio) +
-			ficha(
-				[["Folio", `#${esc(datos.folio)}`]],
-				esc(datos.producto),
-			) +
+			ficha([["Folio", `#${esc(datos.folio)}`]], esc(datos.producto)) +
 			nota(
 				`<strong style="color:${HUESO};">¿Algo no salió bien?</strong> Responde a este correo. Lo lee una persona y lo resolvemos.`,
 				LIMA,

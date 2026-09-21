@@ -189,7 +189,11 @@ export class DisenosService {
 	 * Se comprueba por CORREO, que es como se encuentran los pedidos de alguien
 	 * —incluidos los que hizo antes de tener cuenta—.
 	 */
-	private async suyaOFalla(quien: Identidad, pedidoId: string, lineaId: string) {
+	private async suyaOFalla(
+		quien: Identidad,
+		pedidoId: string,
+		lineaId: string,
+	) {
 		const [fila] = await this.db
 			.select({ partida: e.pedidoPartidas })
 			.from(e.pedidoPartidas)
@@ -205,7 +209,8 @@ export class DisenosService {
 
 		/* El mismo mensaje si no existe y si es de otra persona: distinguirlos
 		   convierte esto en una forma de averiguar qué pedidos existen. */
-		if (!fila) throw new NotFoundException("No encontramos esa línea de pedido");
+		if (!fila)
+			throw new NotFoundException("No encontramos esa línea de pedido");
 		return fila.partida;
 	}
 }

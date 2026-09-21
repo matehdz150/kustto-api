@@ -12,22 +12,28 @@ import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { NestFactory } from "@nestjs/core";
 import { eq } from "drizzle-orm";
-import { AppModule } from "../src/app.module";
 import { AlmacenService } from "../src/almacen/almacen.service";
+import { AppModule } from "../src/app.module";
 import { BordadoService } from "../src/bordado/bordado.service";
-import { DigitalizadorService } from "../src/bordado/digitalizador.service";
 import { embroideryDesignHash, embroideryJobId } from "../src/bordado/contrato";
+import { DigitalizadorService } from "../src/bordado/digitalizador.service";
 import { DB, type Db } from "../src/db/db.module";
 import * as e from "../src/db/esquema";
 
 let fallos = 0;
 
 function comprobar(que: string, bien: boolean, detalle = "") {
-	console.log(`  ${bien ? "ok  " : "FALLA"}  ${que}${detalle ? ` — ${detalle}` : ""}`);
+	console.log(
+		`  ${bien ? "ok  " : "FALLA"}  ${que}${detalle ? ` — ${detalle}` : ""}`,
+	);
 	if (!bien) fallos++;
 }
 
-async function falla(que: string, fn: () => Promise<unknown>, esperado: string) {
+async function falla(
+	que: string,
+	fn: () => Promise<unknown>,
+	esperado: string,
+) {
 	try {
 		await fn();
 		comprobar(que, false, "no lanzó");
@@ -164,7 +170,11 @@ async function principal() {
 
 	const uno = await bordado.crear(quien, { design: diseno });
 	comprobar("se crea en cola", uno.status === "QUEUED", uno.status);
-	comprobar("con un id derivado, no un uuid", /^emb_[a-f0-9]{40}$/.test(uno.jobId), uno.jobId);
+	comprobar(
+		"con un id derivado, no un uuid",
+		/^emb_[a-f0-9]{40}$/.test(uno.jobId),
+		uno.jobId,
+	);
 
 	const dos = await bordado.crear(quien, { design: diseno });
 	comprobar(
@@ -181,7 +191,11 @@ async function principal() {
 		.select()
 		.from(e.trabajosDeBordado)
 		.where(eq(e.trabajosDeBordado.compradorId, quien.sub));
-	comprobar("y sólo hay un trabajo suyo en la base", cuantos.length === 1, `${cuantos.length}`);
+	comprobar(
+		"y sólo hay un trabajo suyo en la base",
+		cuantos.length === 1,
+		`${cuantos.length}`,
+	);
 
 	const ajeno = { ...quien, sub: `otro-${Date.now()}` };
 	await falla(
@@ -191,7 +205,10 @@ async function principal() {
 	);
 
 	/* El mismo diseño de OTRA persona es otro trabajo: el id lleva el dueño. */
-	const deOtro = await embroideryJobId(ajeno.sub, await embroideryDesignHash(diseno as never));
+	const deOtro = await embroideryJobId(
+		ajeno.sub,
+		await embroideryDesignHash(diseno as never),
+	);
 	comprobar(
 		"pero el mismo diseño de otra persona es otro trabajo",
 		deOtro !== uno.jobId,
@@ -210,7 +227,10 @@ async function principal() {
 	};
 	const sha = (b: Buffer) => createHash("sha256").update(b).digest("hex");
 
-	(digitalizador as any).correrMotor = async (_diseno: string, carpeta: string) => {
+	(digitalizador as any).correrMotor = async (
+		_diseno: string,
+		carpeta: string,
+	) => {
 		for (const [nombre, cuerpo] of Object.entries(artefactos)) {
 			await writeFile(join(carpeta, nombre), cuerpo);
 		}
@@ -239,7 +259,11 @@ async function principal() {
 		jobId: uno.jobId,
 		disenoHash: uno.designHash,
 	});
-	comprobar("lo toma y lo procesa", primera.tomado === true, JSON.stringify(primera));
+	comprobar(
+		"lo toma y lo procesa",
+		primera.tomado === true,
+		JSON.stringify(primera),
+	);
 
 	const segunda = await digitalizador.procesar({
 		jobId: uno.jobId,
@@ -256,9 +280,20 @@ async function principal() {
 		.from(e.trabajosDeBordado)
 		.where(eq(e.trabajosDeBordado.id, uno.jobId));
 
-	comprobar("queda en REVIEW, que también es un éxito", tras.estado === "REVIEW", tras.estado);
-	comprobar("con su confianza y sus métricas", tras.confianza === 0.62 && (tras.metricas as any).stitchCount === 4210);
-	comprobar("el contador de intentos sube al TOMARLO", tras.intentos === 1, `${tras.intentos}`);
+	comprobar(
+		"queda en REVIEW, que también es un éxito",
+		tras.estado === "REVIEW",
+		tras.estado,
+	);
+	comprobar(
+		"con su confianza y sus métricas",
+		tras.confianza === 0.62 && (tras.metricas as any).stitchCount === 4210,
+	);
+	comprobar(
+		"el contador de intentos sube al TOMARLO",
+		tras.intentos === 1,
+		`${tras.intentos}`,
+	);
 	comprobar(
 		"y los artefactos quedan bajo el hash del diseño",
 		tras.claveDst?.startsWith(`embroidery/${uno.designHash}/`) === true,
@@ -292,7 +327,10 @@ async function principal() {
 		.from(e.trabajosDeBordado)
 		.where(eq(e.trabajosDeBordado.id, uno.jobId));
 
-	comprobar("un fallo del motor deja el trabajo FAILED", fallado.estado === "FAILED");
+	comprobar(
+		"un fallo del motor deja el trabajo FAILED",
+		fallado.estado === "FAILED",
+	);
 	comprobar(
 		"con un código accionable, no un 'falló'",
 		fallado.codigoError === "ENGINE_TIMEOUT",
@@ -306,7 +344,10 @@ async function principal() {
 		sinReintento.status,
 	);
 
-	const reintentado = await bordado.crear(quien, { design: diseno, retry: true });
+	const reintentado = await bordado.crear(quien, {
+		design: diseno,
+		retry: true,
+	});
 	comprobar(
 		"pidiendo reintento, vuelve a la cola",
 		reintentado.status === "QUEUED",
@@ -314,7 +355,12 @@ async function principal() {
 	);
 
 	/* ─── Limpieza ────────────────────────────────────────────────────── */
-	for (const clave of [tras.claveDst, tras.claveVista, tras.claveMetadatos, tras.claveEntrada]) {
+	for (const clave of [
+		tras.claveDst,
+		tras.claveVista,
+		tras.claveMetadatos,
+		tras.claveEntrada,
+	]) {
 		if (clave) await almacen.borrar(clave);
 	}
 

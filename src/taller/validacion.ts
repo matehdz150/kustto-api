@@ -36,7 +36,9 @@ export function validarTecnicas(lados: Cuerpo[]) {
 		if (tecnica === undefined || tecnica === null || tecnica === "") continue;
 
 		if (typeof tecnica !== "string" || !TECNICAS.has(tecnica)) {
-			throw new BadRequestException(`No conocemos la técnica "${String(tecnica)}"`);
+			throw new BadRequestException(
+				`No conocemos la técnica "${String(tecnica)}"`,
+			);
 		}
 	}
 }
@@ -125,7 +127,9 @@ export function validarFotosReales(crudas: unknown): FotoReal[] {
 		const url = String(f.url ?? "").trim();
 
 		if (!lado) {
-			throw new BadRequestException("Una foto de prenda no dice de qué lado es");
+			throw new BadRequestException(
+				"Una foto de prenda no dice de qué lado es",
+			);
 		}
 		if (!color) {
 			throw new BadRequestException(

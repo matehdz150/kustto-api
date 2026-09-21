@@ -26,7 +26,11 @@ type Personalizacion = "libre" | "bloqueada" | "sin_personalizacion";
 
 const ID = /^[a-zA-Z0-9_-]{1,64}$/;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const PERSONALIZACIONES: Personalizacion[] = ["libre", "bloqueada", "sin_personalizacion"];
+const PERSONALIZACIONES: Personalizacion[] = [
+	"libre",
+	"bloqueada",
+	"sin_personalizacion",
+];
 const MAX_ITEMS = 5;
 const MAX_EVENTOS = 50;
 
@@ -107,7 +111,9 @@ export class EventosService {
 			.from(e.eventos)
 			.where(eq(e.eventos.compradorId, quien.sub));
 		if (cuantos >= MAX_EVENTOS) {
-			throw new ConflictException(`No puedes tener más de ${MAX_EVENTOS} eventos.`);
+			throw new ConflictException(
+				`No puedes tener más de ${MAX_EVENTOS} eventos.`,
+			);
 		}
 
 		const contenido = await this.leerContenido(cuerpo ?? {}, quien.sub);
@@ -137,11 +143,17 @@ export class EventosService {
 	async actualizar(quien: Identidad, id: string, cuerpo: Cuerpo) {
 		const anterior = await this.suyoOFalla(quien, id);
 		if (anterior.estado !== "borrador") {
-			throw new ConflictException("Un evento publicado ya no puede cambiar sus reglas.");
+			throw new ConflictException(
+				"Un evento publicado ya no puede cambiar sus reglas.",
+			);
 		}
 
 		const previos = (await productosDe(this.db, [id])).get(id) ?? [];
-		const contenido = await this.leerContenido(cuerpo ?? {}, quien.sub, previos);
+		const contenido = await this.leerContenido(
+			cuerpo ?? {},
+			quien.sub,
+			previos,
+		);
 
 		await this.db.transaction(async (tx) => {
 			await tx
@@ -152,7 +164,9 @@ export class EventosService {
 			/* Se reescriben todos, pero CON EL ID QUE YA TENÍAN: `leerContenido`
 			   lo conserva para los que siguen. Es un borrador, así que todavía
 			   no hay diseños de invitados colgando de ellos. */
-			await tx.delete(e.eventoProductos).where(eq(e.eventoProductos.eventoId, id));
+			await tx
+				.delete(e.eventoProductos)
+				.where(eq(e.eventoProductos.eventoId, id));
 			await tx
 				.insert(e.eventoProductos)
 				.values(contenido.productos.map((p) => ({ ...p, eventoId: id })));
@@ -169,7 +183,9 @@ export class EventosService {
 
 		const ahora = new Date();
 		if (!anterior.cierraEn || anterior.cierraEn <= ahora) {
-			throw new BadRequestException("La fecha de cierre tiene que estar en el futuro.");
+			throw new BadRequestException(
+				"La fecha de cierre tiene que estar en el futuro.",
+			);
 		}
 
 		const productos = (await productosDe(this.db, [id])).get(id) ?? [];
@@ -210,36 +226,56 @@ export class EventosService {
 		return this.obtenerSinParticipaciones(id);
 	}
 
-	async configurarProducto(quien: Identidad, id: string, itemId: string, cuerpo: Cuerpo) {
+	async configurarProducto(
+		quien: Identidad,
+		id: string,
+		itemId: string,
+		cuerpo: Cuerpo,
+	) {
 		const anterior = await this.suyoOFalla(quien, id);
 		if (anterior.estado !== "borrador") {
-			throw new ConflictException("Las reglas de personalización se fijan antes de publicar.");
+			throw new ConflictException(
+				"Las reglas de personalización se fijan antes de publicar.",
+			);
 		}
 
 		const c = cuerpo ?? {};
 		const personalizacion = String(c.personalizacion ?? "") as Personalizacion;
 		if (!PERSONALIZACIONES.includes(personalizacion)) {
-			throw new BadRequestException("Elige una regla de personalización válida.");
+			throw new BadRequestException(
+				"Elige una regla de personalización válida.",
+			);
 		}
 
 		const arteId = c.arteId === null ? null : String(c.arteId ?? "");
 		if (arteId && !UUID.test(arteId)) {
-			throw new BadRequestException("La referencia del diseño base no es válida.");
+			throw new BadRequestException(
+				"La referencia del diseño base no es válida.",
+			);
 		}
 
 		const [producto] = UUID.test(itemId)
 			? await this.db
 					.select()
 					.from(e.eventoProductos)
-					.where(and(eq(e.eventoProductos.id, itemId), eq(e.eventoProductos.eventoId, id)))
+					.where(
+						and(
+							eq(e.eventoProductos.id, itemId),
+							eq(e.eventoProductos.eventoId, id),
+						),
+					)
 			: [];
-		if (!producto) throw new NotFoundException("Ese producto no pertenece al evento.");
+		if (!producto)
+			throw new NotFoundException("Ese producto no pertenece al evento.");
 
 		/* LA RUTA LA ARMA EL SERVIDOR con el `sub` del token: el navegador sólo
 		   dice qué arte suyo es, y así no puede apuntar la base a la carpeta de
 		   otra persona. `null` explícito la quita; no mandarlo la deja igual. */
 		const disenoBase: DisenoBase | null = arteId
-			? { arteId, ruta: `/medios/plantillas/${quien.sub}/${arteId}/diseno.json` }
+			? {
+					arteId,
+					ruta: `/medios/plantillas/${quien.sub}/${arteId}/diseno.json`,
+				}
 			: c.arteId === null
 				? null
 				: ((producto.disenoBase as DisenoBase | null) ?? null);
@@ -313,7 +349,10 @@ export class EventosService {
 	 * Lambda. Sólo `GET /cuenta/eventos/:id` las trae.
 	 */
 	private async obtenerSinParticipaciones(id: string) {
-		const [evento] = await this.db.select().from(e.eventos).where(eq(e.eventos.id, id));
+		const [evento] = await this.db
+			.select()
+			.from(e.eventos)
+			.where(eq(e.eventos.id, id));
 		const productos = await productosDe(this.db, [id]);
 		return vistaDeEvento(evento, productos.get(id) ?? []);
 	}
@@ -347,20 +386,32 @@ export class EventosService {
 			throw new BadRequestException("Pon un nombre de hasta 80 caracteres.");
 		}
 		if (descripcion.length > 500) {
-			throw new BadRequestException("La descripción no puede pasar de 500 caracteres.");
+			throw new BadRequestException(
+				"La descripción no puede pasar de 500 caracteres.",
+			);
 		}
 
 		const abreEn = fechaValida(c.abreEn, "apertura");
 		const cierraEn = fechaValida(c.cierraEn, "cierre");
 		if (cierraEn <= abreEn) {
-			throw new BadRequestException("El cierre debe ser posterior a la apertura.");
+			throw new BadRequestException(
+				"El cierre debe ser posterior a la apertura.",
+			);
 		}
 
 		const direccion = leerDireccion(c.direccion);
 
-		const ids = [...new Set((Array.isArray(c.productos) ? c.productos : []).map(String))];
-		if (!ids.length || ids.length > MAX_ITEMS || ids.some((id) => !UUID.test(id))) {
-			throw new BadRequestException(`Elige entre 1 y ${MAX_ITEMS} productos válidos.`);
+		const ids = [
+			...new Set((Array.isArray(c.productos) ? c.productos : []).map(String)),
+		];
+		if (
+			!ids.length ||
+			ids.length > MAX_ITEMS ||
+			ids.some((id) => !UUID.test(id))
+		) {
+			throw new BadRequestException(
+				`Elige entre 1 y ${MAX_ITEMS} productos válidos.`,
+			);
 		}
 
 		const instantaneas = await instantaneasDe(this.db, ids);
@@ -368,7 +419,9 @@ export class EventosService {
 		const productos = ids.map((productoId, orden) => {
 			const instantanea = instantaneas.get(productoId);
 			if (!instantanea) {
-				throw new BadRequestException("Uno de los productos ya no está publicado.");
+				throw new BadRequestException(
+					"Uno de los productos ya no está publicado.",
+				);
 			}
 			const anterior = previos.find((p) => p.productoId === productoId);
 			return {
@@ -464,7 +517,9 @@ function leerDireccion(valor: unknown) {
 		!direccion.estado ||
 		direccion.cp.length !== 5
 	) {
-		throw new BadRequestException("Completa la dirección donde se entregará el evento.");
+		throw new BadRequestException(
+			"Completa la dirección donde se entregará el evento.",
+		);
 	}
 	return direccion;
 }
