@@ -1,4 +1,5 @@
 import { Module } from "@nestjs/common";
+import { AdminModule } from "./admin/admin.module";
 import { AlmacenModule } from "./almacen/almacen.module";
 import { AuthModule } from "./auth/auth.module";
 import { AvisosModule } from "./avisos/avisos.module";
@@ -26,6 +27,7 @@ import { SaludModule } from "./salud/salud.module";
 		CatalogoModule,
 		PedidosModule,
 		CuentaModule,
+		AdminModule,
 	],
 })
 export class AppModule {}

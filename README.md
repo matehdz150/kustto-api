@@ -152,11 +152,42 @@ camino" y "llegó"— salen por dos caminos: el taller a mano, o la paquetería 
 webhook. Si divergían, el mismo cliente recibía un texto u otro según quién
 movió el pedido.
 
+## El backoffice
+
+Todo cuelga de `/admin/` y detrás del pool de **admins**, que es un tercer pool
+de Cognito distinto al de compradores y al de talleres. Antes iba detrás de una
+llave compartida guardada por un route handler de Next; se quitó al publicar el
+backoffice, porque una página estática no puede guardar un secreto.
+
+- **Plantillas de prenda** — lo que el editor necesita para montar el lienzo.
+  La validación vive en el modelo y no sólo en el asistente: un lado sin mockup
+  o sin área imprimible rompe el lienzo en silencio, y **un cilindro tiene un
+  solo lado** porque la envoltura ES el objeto.
+- **Categorías**, **revisión de productos** (la única transición que el admin
+  puede hacer y el taller no es publicar), **alta de talleres** y **paquetes**.
+- **Subidas a S3**: el archivo nunca pasa por la API, va del navegador a una
+  URL firmada. Lo que se guarda es una **ruta relativa**, nunca la de S3.
+
+**Los archivos se sirven desde nuestro origen** (`/publico/mockups/*`,
+`/publico/medios/*`, `/publico/archivos-eventos/*`) con el bucket cerrado. No
+es una preferencia: el teñido de prenda hace `getImageData()` sobre el mockup,
+y desde otro origen el canvas queda contaminado y el teñido se apaga sin decir
+nada. Ahora se transmite en vez de cargarlo en memoria — la Lambda tenía que
+devolverlo en base64 dentro de la respuesta de API Gateway.
+
+### Credenciales de AWS
+
+S3 y Cognito se quedan, así que la API necesita credenciales de verdad. En
+local, el compose monta `~/.aws` de sólo lectura dentro del contenedor y
+`AWS_PROFILE` dice cuál usar. **En un servidor eso se borra** y las da el rol
+de la máquina.
+
 ## Probarlo
 
 ```bash
 pnpm probar:pedidos    # el ciclo del pedido: transiciones, cancelación, carreras
 pnpm probar:envios     # limitador, cotización guardada, webhook, carrito, cuenta
+pnpm probar:admin      # plantillas, categorías, revisión, paquetes y subidas
 ```
 
 Corren contra la base de `docker compose` y por el código real, no por HTTP:
@@ -172,7 +203,11 @@ recotización y el webhook de rastreo), los **correos** del pedido, el
 **carrito**, el **perfil**, los **favoritos**, los **diseños guardados** y la
 **biblioteca de imágenes**.
 
+Portado también: **el backoffice entero** —plantillas de prenda, categorías,
+revisión de productos, alta de talleres, subidas y paquetes— más las rutas que
+sirven los archivos del bucket.
+
 Pendiente: las **plantillas de compra** de `/cuenta`, los **eventos**, los
-**productos del taller** y su perfil, el **backoffice**, el **canal en vivo**
-por WebSocket (el aviso ya se publica en Redis; falta el gateway que lo lea) y
-el **worker de bordado**.
+**productos del taller** y su perfil, el **canal en vivo** por WebSocket (el
+aviso ya se publica en Redis; falta el gateway que lo lea) y el **worker de
+bordado**.

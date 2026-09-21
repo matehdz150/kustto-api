@@ -50,6 +50,18 @@ const esquema = z.object({
 	   público, ni los mockups. Se leen con credenciales y se reparten desde
 	   aquí, que es lo que ya hacía el rewrite del front. */
 	AWS_REGION: z.string().default("us-east-1"),
+	/**
+	 * Cómo se autentica contra S3.
+	 *
+	 * En un servidor de verdad esto va por el ROL de la máquina y las tres
+	 * variables se quedan vacías: el SDK lo resuelve solo. En local hacen falta
+	 * porque el contenedor no ve el `~/.aws` del host a menos que se le monte
+	 * —ver `docker compose`—, y sin credenciales la API arranca bien y se cae
+	 * al primer mockup con "Could not load credentials", que no dice qué falta.
+	 */
+	AWS_PROFILE: opcional(z.string()),
+	AWS_ACCESS_KEY_ID: opcional(z.string()),
+	AWS_SECRET_ACCESS_KEY: opcional(z.string()),
 	S3_BUCKET_PUBLICO: z.string(),
 	S3_BUCKET_PRIVADO: z.string(),
 

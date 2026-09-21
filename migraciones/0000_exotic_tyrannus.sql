@@ -2,6 +2,7 @@ CREATE TYPE "public"."estado_evento" AS ENUM('borrador', 'publicado', 'cerrado')
 CREATE TYPE "public"."estado_pedido" AS ENUM('nuevo', 'produccion', 'listo', 'enviado', 'entregado', 'cancelado');--> statement-breakpoint
 CREATE TYPE "public"."estado_producto" AS ENUM('borrador', 'en_revision', 'activo', 'rechazado', 'archivado');--> statement-breakpoint
 CREATE TYPE "public"."metodo_entrega" AS ENUM('envio', 'recoger');--> statement-breakpoint
+CREATE TYPE "public"."estado_paquete" AS ENUM('borrador', 'activo', 'archivado');--> statement-breakpoint
 CREATE TABLE "categorias" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"nombre" text NOT NULL,
@@ -232,6 +233,37 @@ CREATE TABLE "plantillas_de_compra" (
 	"actualizado_en" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
+CREATE TABLE "paquete_categorias" (
+	"paquete_id" uuid NOT NULL,
+	"categoria_id" uuid NOT NULL,
+	CONSTRAINT "paquete_categorias_paquete_id_categoria_id_pk" PRIMARY KEY("paquete_id","categoria_id")
+);
+--> statement-breakpoint
+CREATE TABLE "paquete_precios" (
+	"paquete_id" uuid PRIMARY KEY NOT NULL,
+	"precio_base" numeric(12, 2) DEFAULT '0' NOT NULL,
+	"descuento_porcentaje" integer
+);
+--> statement-breakpoint
+CREATE TABLE "paquete_productos" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"paquete_id" uuid NOT NULL,
+	"producto_id" uuid NOT NULL,
+	"cantidad" integer DEFAULT 1 NOT NULL,
+	"requiere_diseno" boolean DEFAULT true NOT NULL,
+	"orden" integer DEFAULT 0 NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "paquetes" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"nombre" text NOT NULL,
+	"descripcion" text,
+	"imagen_url" text,
+	"estado" "estado_paquete" DEFAULT 'borrador' NOT NULL,
+	"creado_en" timestamp with time zone DEFAULT now() NOT NULL,
+	"actualizado_en" timestamp with time zone DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
 CREATE TABLE "compras" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"folio" text NOT NULL,
@@ -371,6 +403,11 @@ ALTER TABLE "plantilla_de_compra_partidas" ADD CONSTRAINT "plantilla_de_compra_p
 ALTER TABLE "plantilla_de_compra_partidas" ADD CONSTRAINT "plantilla_de_compra_partidas_producto_id_productos_id_fk" FOREIGN KEY ("producto_id") REFERENCES "public"."productos"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "plantilla_de_compra_partidas" ADD CONSTRAINT "plantilla_de_compra_partidas_diseno_id_disenos_id_fk" FOREIGN KEY ("diseno_id") REFERENCES "public"."disenos"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "plantillas_de_compra" ADD CONSTRAINT "plantillas_de_compra_comprador_id_compradores_id_fk" FOREIGN KEY ("comprador_id") REFERENCES "public"."compradores"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "paquete_categorias" ADD CONSTRAINT "paquete_categorias_paquete_id_paquetes_id_fk" FOREIGN KEY ("paquete_id") REFERENCES "public"."paquetes"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "paquete_categorias" ADD CONSTRAINT "paquete_categorias_categoria_id_categorias_id_fk" FOREIGN KEY ("categoria_id") REFERENCES "public"."categorias"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "paquete_precios" ADD CONSTRAINT "paquete_precios_paquete_id_paquetes_id_fk" FOREIGN KEY ("paquete_id") REFERENCES "public"."paquetes"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "paquete_productos" ADD CONSTRAINT "paquete_productos_paquete_id_paquetes_id_fk" FOREIGN KEY ("paquete_id") REFERENCES "public"."paquetes"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "paquete_productos" ADD CONSTRAINT "paquete_productos_producto_id_productos_id_fk" FOREIGN KEY ("producto_id") REFERENCES "public"."productos"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "envios_de_paqueteria" ADD CONSTRAINT "envios_de_paqueteria_pedido_id_pedidos_id_fk" FOREIGN KEY ("pedido_id") REFERENCES "public"."pedidos"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "pedido_bitacora" ADD CONSTRAINT "pedido_bitacora_pedido_id_pedidos_id_fk" FOREIGN KEY ("pedido_id") REFERENCES "public"."pedidos"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "pedido_partida_tallas" ADD CONSTRAINT "pedido_partida_tallas_partida_id_pedido_partidas_id_fk" FOREIGN KEY ("partida_id") REFERENCES "public"."pedido_partidas"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -400,6 +437,9 @@ CREATE INDEX "eventos_comprador" ON "eventos" USING btree ("comprador_id","cread
 CREATE INDEX "imagenes_de_comprador_comprador" ON "imagenes_de_comprador" USING btree ("comprador_id","creado_en");--> statement-breakpoint
 CREATE INDEX "plantilla_de_compra_partidas_plantilla" ON "plantilla_de_compra_partidas" USING btree ("plantilla_id");--> statement-breakpoint
 CREATE INDEX "plantillas_de_compra_comprador" ON "plantillas_de_compra" USING btree ("comprador_id","creado_en");--> statement-breakpoint
+CREATE INDEX "paquete_categorias_categoria" ON "paquete_categorias" USING btree ("categoria_id");--> statement-breakpoint
+CREATE INDEX "paquete_productos_paquete" ON "paquete_productos" USING btree ("paquete_id","orden");--> statement-breakpoint
+CREATE INDEX "paquetes_estado" ON "paquetes" USING btree ("estado");--> statement-breakpoint
 CREATE UNIQUE INDEX "compras_folio_unico" ON "compras" USING btree ("folio");--> statement-breakpoint
 CREATE INDEX "compras_correo_creado" ON "compras" USING btree ("correo","creado_en");--> statement-breakpoint
 CREATE INDEX "cotizaciones_de_envio_expira" ON "cotizaciones_de_envio" USING btree ("expira_en");--> statement-breakpoint

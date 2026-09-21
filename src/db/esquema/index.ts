@@ -8,5 +8,6 @@
 export * from "./catalogo";
 export * from "./compradores";
 export * from "./comun";
+export * from "./paquetes";
 export * from "./pedidos";
 export * from "./talleres";

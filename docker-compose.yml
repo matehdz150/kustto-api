@@ -62,6 +62,13 @@ services:
       DATABASE_URL: postgres://kustto:kustto@postgres:5432/kustto
       REDIS_URL: redis://redis:6379
     ports: ["${PUERTO_API:-8001}:8000"]
+    volumes:
+      # El `~/.aws` del host, sólo lectura.
+      #
+      # S3 y Cognito son las dos piezas que se quedan, así que la API necesita
+      # credenciales de verdad: no hay forma honesta de emularlas. En un
+      # servidor esto se borra y las da el rol de la máquina.
+      - ${HOME}/.aws:/home/node/.aws:ro
     depends_on:
       postgres: { condition: service_healthy }
       redis: { condition: service_healthy }
@@ -79,6 +86,8 @@ services:
     build: .
     command: ["node", "dist/workers/main.js"]
     env_file: [.env]
+    volumes:
+      - ${HOME}/.aws:/home/node/.aws:ro
     environment:
       DATABASE_URL: postgres://kustto:kustto@postgres:5432/kustto
       REDIS_URL: redis://redis:6379
