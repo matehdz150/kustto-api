@@ -33,10 +33,10 @@ export class CarritoService {
 			.select()
 			.from(e.carritoPartidas)
 			.where(eq(e.carritoPartidas.compradorId, quien.sub))
-			.orderBy(asc(e.carritoPartidas.creadoEn));
+			.orderBy(asc(e.carritoPartidas.orden));
 
 		return {
-			articulos: filas.map(aArticulo),
+			articulos: filas.map((f) => f.articulo),
 			actualizadoEn:
 				filas
 					.map((f) => f.actualizadoEn.toISOString())
@@ -76,7 +76,7 @@ export class CarritoService {
 				.delete(e.carritoPartidas)
 				.where(eq(e.carritoPartidas.compradorId, quien.sub));
 
-			for (const a of articulos) {
+			for (const [orden, a] of articulos.entries()) {
 				const productoId = String(a?.productoId ?? "").trim();
 				if (!productoId) continue;
 
@@ -91,18 +91,12 @@ export class CarritoService {
 				   pedir se descubría que ya no estaba. */
 				if (!existe) continue;
 
+				/* ENTERO Y TAL CUAL: ver el comentario de la tabla. */
 				await tx.insert(e.carritoPartidas).values({
 					compradorId: quien.sub,
 					productoId,
-					color: a?.colorPrenda ?? a?.color ?? null,
-					talla: a?.talla ?? null,
-					piezas: Math.max(1, Math.trunc(Number(a?.piezas ?? 1))),
-					/* Todo lo demás del artículo se guarda tal cual: son rutas del
-					   arte, tallas y lo que el editor necesite para reabrirlo, y
-					   normalizarlo obligaría a conocer su forma, que cambia con el
-					   editor y no con la base de datos. */
-					arte: a?.arte ?? null,
-					diseno: a?.diseno ?? null,
+					orden,
+					articulo: a,
 					creadoEn: ahora,
 					actualizadoEn: ahora,
 				});
@@ -120,16 +114,4 @@ export class CarritoService {
 
 		return { articulos: [], actualizadoEn: null };
 	}
-}
-
-function aArticulo(f: typeof e.carritoPartidas.$inferSelect) {
-	return {
-		id: f.id,
-		productoId: f.productoId,
-		colorPrenda: f.color,
-		talla: f.talla,
-		piezas: f.piezas,
-		arte: f.arte,
-		diseno: f.diseno,
-	};
 }

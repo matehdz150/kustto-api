@@ -15,6 +15,13 @@
       "when": 1790017008290,
       "tag": "0001_eventos_completos",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790019865506,
+      "tag": "0002_carrito_entero",
+      "breakpoints": true
     }
   ]
 }

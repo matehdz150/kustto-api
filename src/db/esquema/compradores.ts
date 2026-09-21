@@ -57,6 +57,16 @@ export const compradores = pgTable(
  * GUARDA RUTAS, NO ARCHIVOS: el arte se sube a S3 al agregar, no al pagar —si
  * no, no cabría en el navegador— y caduca a los 30 días por política del
  * bucket. Aquí sólo vive la ruta.
+ *
+ * EL ARTÍCULO SE GUARDA ENTERO, TAL COMO LO MANDA EL NAVEGADOR, en `articulo`.
+ * Estuvo partido en columnas (`color`, `talla`, `piezas`, `arte`, `diseno`) y
+ * era un error: el artículo del editor lleva `carritoId`, `tallas` (una lista,
+ * no una talla), `lados`, `bordados`, `precioUnitario`, la miniatura… y todo
+ * eso se perdía al guardar. El carrito volvía de la cuenta sin `tallas` y la
+ * cabecera reventaba al contar piezas. Su forma la decide el editor, no la
+ * base de datos: normalizarla obliga a migrar cada vez que el editor cambia.
+ *
+ * `productoId` sí va en columna, sólo por la clave foránea.
  */
 export const carritoPartidas = pgTable(
 	"carrito_partidas",
@@ -68,14 +78,13 @@ export const carritoPartidas = pgTable(
 		productoId: uuid("producto_id")
 			.notNull()
 			.references(() => productos.id, { onDelete: "cascade" }),
-		color: text(),
-		talla: text(),
-		piezas: integer().notNull().default(1),
-		arte: jsonb(),
-		diseno: jsonb(),
+		/** La posición en la lista: se guarda entera en una transacción y
+		 *  `creado_en` es el mismo para todas. */
+		orden: integer().notNull().default(0),
+		articulo: jsonb().notNull(),
 		...marcas,
 	},
-	(t) => [index("carrito_partidas_comprador").on(t.compradorId)],
+	(t) => [index("carrito_partidas_comprador").on(t.compradorId, t.orden)],
 );
 
 /**

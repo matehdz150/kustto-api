@@ -7,6 +7,7 @@
  * webhook firmado— y no que su API conteste.
  */
 import { createHmac } from "node:crypto";
+import { isDeepStrictEqual } from "node:util";
 import { NestFactory } from "@nestjs/core";
 import { eq } from "drizzle-orm";
 import type IORedis from "ioredis";
@@ -315,10 +316,29 @@ async function principal() {
 	console.log("\n5. Carrito");
 	await perfil.guardar(quien, { nombre: "Prueba", whatsapp: "3312345678" });
 
+	/* Con la forma REAL del editor (`lib/carrito/almacen.ts` en kustto-web):
+	   `tallas` es una lista y viene todo lo que hace falta para pedir. Esta
+	   prueba usaba `{ talla, piezas }` y por eso nunca vio que la API tiraba
+	   todo lo demás. */
+	const articulo = {
+		id: "linea-1",
+		carritoId: crypto.randomUUID(),
+		productoId: producto.id,
+		nombre: producto.nombre,
+		proveedorId: producto.tallerId,
+		proveedorNombre: null,
+		colorPrenda: existencia.color,
+		lados: [{ lado: "frente", anchoPx: 3000, altoPx: 3000, dpi: 300 }],
+		tallas: [{ size: existencia.talla, piezas: 2 }],
+		precioUnitario: 199,
+		miniatura: null,
+		agregadoEn: 1,
+	};
+
 	const guardado = await carrito.guardar(quien, {
 		articulos: [
-			{ productoId: producto.id, colorPrenda: existencia.color, talla: existencia.talla, piezas: 2 },
-			{ productoId: "00000000-0000-4000-8000-000000000000", piezas: 1 },
+			articulo,
+			{ ...articulo, carritoId: crypto.randomUUID(), productoId: "00000000-0000-4000-8000-000000000000" },
 		],
 	});
 	comprobar(
@@ -326,7 +346,11 @@ async function principal() {
 		guardado.articulos.length === 1,
 		`${guardado.articulos.length} artículos`,
 	);
-	comprobar("y el bueno se queda con sus piezas", guardado.articulos[0].piezas === 2);
+	comprobar(
+		"el artículo vuelve ENTERO, tal como se mandó",
+		/* Igualdad profunda y no `JSON.stringify`: `jsonb` reordena las llaves. */
+		isDeepStrictEqual((await carrito.obtener(quien)).articulos[0], articulo),
+	);
 
 	await falla(
 		"no admite más de 30 artículos",
@@ -337,12 +361,12 @@ async function principal() {
 		"no admite más de 30",
 	);
 
-	const reemplazado = await carrito.guardar(quien, {
-		articulos: [{ productoId: producto.id, piezas: 5 }],
-	});
+	const otro = { ...articulo, carritoId: crypto.randomUUID(), agregadoEn: 2 };
+	const reemplazado = await carrito.guardar(quien, { articulos: [otro, articulo] });
 	comprobar(
-		"guardar reemplaza, no acumula",
-		reemplazado.articulos.length === 1 && reemplazado.articulos[0].piezas === 5,
+		"guardar reemplaza, no acumula, y respeta el orden",
+		reemplazado.articulos.length === 2 &&
+			(reemplazado.articulos[0] as { carritoId: string }).carritoId === otro.carritoId,
 		`${reemplazado.articulos.length} artículos`,
 	);
 

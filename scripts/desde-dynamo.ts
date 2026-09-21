@@ -618,17 +618,16 @@ async function principal() {
 				.delete(e.carritoPartidas)
 				.where(eq(e.carritoPartidas.compradorId, idDe(it.pk)));
 
-			for (const a of it.articulos ?? []) {
+			/* El artículo entero, como lo guardaba la Lambda: ver el comentario
+			   de `carrito_partidas`. */
+			for (const [orden, a] of (it.articulos ?? []).entries()) {
 				await db
 					.insert(e.carritoPartidas)
 					.values({
 						compradorId: idDe(it.pk),
 						productoId: a.productoId ?? a.productId,
-						color: opcional(a.color),
-						talla: opcional(a.talla ?? a.size),
-						piezas: Number(a.piezas ?? a.cantidad ?? 1),
-						arte: a.arte ?? a.rutas ?? null,
-						diseno: a.diseno ?? null,
+						orden,
+						articulo: a,
 						creadoEn: fecha(it.actualizadoEn),
 						actualizadoEn: fecha(it.actualizadoEn),
 					})
