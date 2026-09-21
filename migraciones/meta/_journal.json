@@ -29,6 +29,13 @@
       "when": 1790021022842,
       "tag": "0003_notas_del_pedido",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1790028921943,
+      "tag": "0004_cuentas_propias",
+      "breakpoints": true
     }
   ]
 }

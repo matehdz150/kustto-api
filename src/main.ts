@@ -1,12 +1,15 @@
 import { Logger, ValidationPipe } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
+import type { NestExpressApplication } from "@nestjs/platform-express";
+import cookieParser from "cookie-parser";
+import type { NextFunction, Request, Response } from "express";
 import { AppModule } from "./app.module";
 import { ENTORNO } from "./config/config.module";
 import type { Entorno } from "./config/entorno";
 import { VivoGateway } from "./vivo/vivo.gateway";
 
 async function arrancar() {
-	const app = await NestFactory.create(AppModule, {
+	const app = await NestFactory.create<NestExpressApplication>(AppModule, {
 		bufferLogs: true,
 		/**
 		 * Guarda los BYTES que llegaron, además del cuerpo ya parseado.
@@ -35,16 +38,45 @@ async function arrancar() {
 		}),
 	);
 
+	const origenes = env.ORIGENES.split(",").map((o) => o.trim());
+
 	/**
 	 * CORS con lista de orígenes, no `*`.
 	 *
-	 * Las rutas con sesión mandan el token por cabecera, así que `*` no las
-	 * rompería — pero abrirlo entero invita a que mañana alguien ponga una
-	 * cookie y no se entere de que acaba de abrir la puerta.
+	 * Con la sesión en una cookie esto ya no es una precaución: con `*` y
+	 * `credentials`, cualquier sitio podría leer respuestas con la sesión de
+	 * quien lo visita.
 	 */
-	app.enableCors({
-		origin: env.ORIGENES.split(",").map((o) => o.trim()),
-		credentials: true,
+	app.enableCors({ origin: origenes, credentials: true });
+
+	/* Las cookies de sesión (`kustto_acceso_*`, `kustto_renovacion_*`). */
+	app.use(cookieParser());
+
+	/* Ver CONFIAR_EN_PROXY: decide de dónde sale `req.ip`. */
+	if (env.CONFIAR_EN_PROXY) app.set("trust proxy", 1);
+
+	/**
+	 * CSRF: una escritura que viene de un origen ajeno se rechaza.
+	 *
+	 * CORS NO BASTA. Impide LEER la respuesta, no ENVIAR la petición: un
+	 * formulario de otro sitio puede mandar un POST y el navegador le pega la
+	 * cookie de sesión. `SameSite=Lax` ya frena casi todo eso; esto es la
+	 * segunda capa, y la que no depende del navegador.
+	 *
+	 * SIN `Origin` SE DEJA PASAR a propósito: los navegadores lo mandan en
+	 * toda escritura, así que no traerlo es un cliente que no es un navegador
+	 * —el webhook de la paquetería, un `curl`—, y ésos no llevan la cookie de
+	 * nadie.
+	 */
+	app.use((req: Request, res: Response, siguiente: NextFunction) => {
+		const escribe = !["GET", "HEAD", "OPTIONS"].includes(req.method);
+		const origen = req.headers.origin;
+
+		if (escribe && origen && !origenes.includes(origen)) {
+			res.status(403).json({ statusCode: 403, message: "Origen no permitido" });
+			return;
+		}
+		siguiente();
 	});
 
 	/**

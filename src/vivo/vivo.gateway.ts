@@ -12,6 +12,9 @@ import { verificar } from "../auth/cognito";
 import { REDIS } from "../colas/colas.module";
 import { ENTORNO } from "../config/config.module";
 import type { Entorno } from "../config/entorno";
+import { JwtService } from "../cuentas/jwt.service";
+import { SesionesService } from "../cuentas/sesiones.service";
+import { cookieDeAcceso } from "../cuentas/tipos";
 
 /** Cada cuánto se comprueba que la conexión sigue viva. */
 const LATIDO_MS = 30_000;
@@ -52,6 +55,8 @@ export class VivoGateway implements OnModuleInit, OnApplicationShutdown {
 	constructor(
 		@Inject(ENTORNO) private readonly env: Entorno,
 		@Inject(REDIS) private readonly redis: IORedis,
+		private readonly jwt: JwtService,
+		private readonly sesiones: SesionesService,
 	) {}
 
 	onModuleInit() {
@@ -152,6 +157,20 @@ export class VivoGateway implements OnModuleInit, OnApplicationShutdown {
 	 */
 	private async deQuienEs(peticion: IncomingMessage) {
 		try {
+			/* LA COOKIE PRIMERO. Con las cuentas propias la sesión viaja sola en
+			   el `upgrade`, como en cualquier petición del mismo sitio, y el token
+			   deja de ir en la URL —donde acaba en los logs de cualquier proxy—.
+			   El `?token=` de Cognito se queda mientras dura la mudanza. */
+			const cookie = leerCookie(
+				peticion.headers.cookie,
+				cookieDeAcceso("taller"),
+			);
+			if (cookie) {
+				const identidad = await this.jwt.verificar("taller", cookie);
+				if (await this.sesiones.bloqueada(identidad.sid)) return null;
+				return identidad.sub;
+			}
+
 			const url = new URL(peticion.url ?? "", "http://interno");
 			const token = url.searchParams.get("token");
 			if (!token) return null;
@@ -193,4 +212,13 @@ export class VivoGateway implements OnModuleInit, OnApplicationShutdown {
 
 		this.servidor?.close();
 	}
+}
+
+/** Una cookie de la cabecera del `upgrade`, que no pasa por `cookie-parser`. */
+function leerCookie(cabecera: string | undefined, nombre: string) {
+	for (const parte of (cabecera ?? "").split(";")) {
+		const [llave, ...valor] = parte.trim().split("=");
+		if (llave === nombre) return decodeURIComponent(valor.join("="));
+	}
+	return null;
 }

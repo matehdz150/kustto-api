@@ -9,6 +9,7 @@ export * from "./bordado";
 export * from "./catalogo";
 export * from "./compradores";
 export * from "./comun";
+export * from "./cuentas";
 export * from "./paquetes";
 export * from "./pedidos";
 export * from "./talleres";

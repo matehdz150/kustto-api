@@ -9,6 +9,7 @@ import { ColasModule } from "./colas/colas.module";
 import { ConfigModule } from "./config/config.module";
 import { CorreoModule } from "./correo/correo.module";
 import { CuentaModule } from "./cuenta/cuenta.module";
+import { CuentasModule } from "./cuentas/cuentas.module";
 import { DbModule } from "./db/db.module";
 import { EnviosModule } from "./envios/envios.module";
 import { EventosModule } from "./eventos/eventos.module";
@@ -23,6 +24,7 @@ import { VivoModule } from "./vivo/vivo.module";
 		ConfigModule,
 		DbModule,
 		ColasModule,
+		CuentasModule,
 		AuthModule,
 		AlmacenModule,
 		CorreoModule,

@@ -66,6 +66,46 @@ const esquema = z.object({
 	COGNITO_POOL_ADMINS: z.string(),
 	COGNITO_CLIENTE_ADMINS: z.string(),
 
+	/* ─── Cuentas propias ─────────────────────────────────────────────────
+	   Lo que reemplaza a Cognito: JWT de acceso de 15 minutos y token de
+	   renovación, los dos en cookies `httpOnly`.
+
+	   OPCIONAL MIENTRAS DURA LA MUDANZA. Sin llave, `/auth/*` responde 503 y
+	   los guards siguen aceptando sólo el token de Cognito: la API arranca
+	   igual que antes. Cuando el front deje Cognito, pasa a obligatoria. */
+
+	/**
+	 * La llave PRIVADA Ed25519, como JWK en una línea y con su `kid`.
+	 * `pnpm auth:llave` genera una. Es un secreto: va en el gestor de secretos
+	 * del servidor, nunca en el repo.
+	 */
+	JWT_LLAVE_PRIVADA: opcional(z.string()),
+	/**
+	 * La PÚBLICA de la llave anterior, con su `kid`, para rotar sin sacar a
+	 * nadie: los JWT firmados con ella siguen valiendo los 15 minutos que les
+	 * quedan. Se borra en cuanto pasan.
+	 */
+	JWT_LLAVE_ANTERIOR: opcional(z.string()),
+	JWT_EMISOR: z.string().default("https://api.kustto.com.mx"),
+	/**
+	 * `.kustto.com.mx` en producción: así la cookie que pone la API llega
+	 * también al sitio. Vacío en local, donde `localhost:3000` y
+	 * `localhost:8001` ya son el mismo sitio.
+	 */
+	COOKIE_DOMINIO: opcional(z.string()),
+	/**
+	 * `Secure` en las cookies. Sólo se apaga en local sin HTTPS: con él
+	 * puesto, Safari no guarda la cookie en `http://localhost`.
+	 */
+	COOKIE_SEGURA: interruptor(true),
+	/**
+	 * Detrás de un proxy o balanceador, la IP del cliente viene en
+	 * `X-Forwarded-For`. Sin esto, el límite de intentos por IP contaría a
+	 * todo el mundo como si fuera el balanceador. Encenderlo SIN proxy delante
+	 * deja que cualquiera invente su IP con esa cabecera.
+	 */
+	CONFIAR_EN_PROXY: interruptor(false),
+
 	/* ─── S3 ──────────────────────────────────────────────────────────────
 	   La otra pieza que se queda. Los buckets siguen CERRADOS: nada se sirve
 	   público, ni los mockups. Se leen con credenciales y se reparten desde

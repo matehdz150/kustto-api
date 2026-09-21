@@ -48,6 +48,42 @@ serían credenciales de producción en un runner. Se corren a mano.
 arreglo automático convierte en `import type` las clases que Nest inyecta, y la
 API deja de arrancar.
 
+## Cuentas propias (reemplazan a Cognito)
+
+**A medias, a propósito.** El módulo `src/cuentas/` ya entra, renueva y sale
+para los tres tipos, pero el front sigue en Cognito. Mientras dura la mudanza
+**los guards aceptan las dos cosas**: la cookie `kustto_acceso_<tipo>` con
+nuestro JWT y, si no la hay, el `Bearer` de Cognito. Los servicios no notan la
+diferencia: los dos caminos dejan el mismo `Identidad`.
+
+```bash
+pnpm auth:llave              # imprime JWT_LLAVE_PRIVADA; va al .env (en local, con COOKIE_SEGURA=false)
+pnpm probar:cuentas
+```
+
+Sin `JWT_LLAVE_PRIVADA`, `/auth/*` responde 503 y todo sigue como antes.
+
+| | JWT de acceso | Token de renovación |
+|---|---|---|
+| Qué es | Ed25519, audiencia `kustto:<tipo>` | 32 bytes al azar; en la base sólo su sha256 |
+| Dura | 15 min (admin 10) | 30 días que se extienden al usarse; tope de 90 (admin: 12 h y 12 h) |
+| Cookie | `HttpOnly; SameSite=Lax; Path=/` | `HttpOnly; SameSite=Strict; Path=/auth/<tipo>` |
+
+- **Una cookie por tipo**, como eran tres pools: entrar como taller no tira
+  la sesión de comprador del mismo navegador, y el guard del taller ni lee la
+  del comprador.
+- **Cada renovación gasta su token.** Uno gastado que vuelve a llegar dentro
+  de 30 s es otra pestaña (se contesta `{ gracia: true }` sin cookies); fuera
+  de esa ventana es un robo y se revoca la sesión entera.
+- **Salir corta YA**: el `sid` entra a una lista de bloqueo en Redis por lo
+  que dura un JWT, y el guard la consulta en cada petición.
+- **CSRF**: además de `SameSite`, una escritura con un `Origin` que no está
+  en `ORIGENES` se rechaza (`main.ts`).
+- **Topes en Redis**: 5 intentos por correo y 30 por IP cada 15 minutos.
+
+Falta: registro y verificación del correo, "olvidé mi contraseña", Google,
+invitación de talleres, traer los 7 usuarios de Cognito y el front.
+
 ## Traer los datos de DynamoDB
 
 ```bash
