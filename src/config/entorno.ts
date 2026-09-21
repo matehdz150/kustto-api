@@ -22,6 +22,25 @@ import { z } from "zod";
 const opcional = <T extends z.ZodTypeAny>(tipo: T) =>
 	z.preprocess((v) => (v === "" ? undefined : v), tipo.optional());
 
+/**
+ * Un interruptor de entorno, leído como lo escribe la gente.
+ *
+ * NO SE USA `z.coerce.boolean()`, y no es una preferencia: ése hace
+ * `Boolean(valor)`, así que la CADENA "false" es verdadera —y "0" también—.
+ * Con eso, `BORDADO_ACTIVO=false` encendía el worker de bordado en la imagen
+ * de la API, que no lleva el motor: los trabajos se tomaban, se marcaban como
+ * PROCESSING y morían con `ENGINE_NOT_AVAILABLE`. Un interruptor que no apaga
+ * es peor que no tener interruptor.
+ *
+ * Se acepta lo que alguien escribiría de verdad en un `.env`, y sólo eso:
+ * cualquier otra cosa falla al arrancar en vez de adivinar.
+ */
+const interruptor = (porDefecto: boolean) =>
+	z
+		.enum(["true", "false", "1", "0", "si", "no", ""])
+		.default(porDefecto ? "true" : "false")
+		.transform((v) => v === "true" || v === "1" || v === "si");
+
 const esquema = z.object({
 	NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
 	PORT: z.coerce.number().default(8000),
@@ -99,8 +118,26 @@ const esquema = z.object({
 	/** El tipo de empaque de la carta porte. 4G = caja de cartón. */
 	KUSTTO_TIPO_EMPAQUE: z.string().default("4G"),
 
-	/** El panel del editor de bordado. Apagado hasta que haya test-sew. */
-	BORDADO_ACTIVO: z.coerce.boolean().default(false),
+	/* ─── Bordado ─────────────────────────────────────────────────────────
+	   APAGADO POR DEFECTO. Los parámetros del perfil salieron de un spike y NO
+	   tienen validación física: nadie ha cosido todavía un diseño preparado
+	   con esto. Hasta que haya test-sew no se conecta al checkout ni al
+	   taller. */
+	BORDADO_ACTIVO: interruptor(false),
+	/** Dónde está el intérprete y el motor, dentro de la imagen de bordado. */
+	BORDADO_PYTHON: z.string().default("/usr/bin/python3"),
+	BORDADO_MOTOR: z.string().default("/app/servicios/bordado/motor.py"),
+	/**
+	 * Cuánto se le da al motor antes de cortarlo.
+	 *
+	 * Aquí ya no hay un máximo de función encima —era lo que obligaba a
+	 * exprimir los 75 segundos de la Lambda— pero el tope se queda: un diseño
+	 * que tarda cinco minutos no es uno lento, es uno que no se va a poder
+	 * coser.
+	 */
+	BORDADO_TIMEOUT_MS: z.coerce.number().default(180_000),
+	/** Cuántas digitalizaciones a la vez. Cada una se come una CPU entera. */
+	BORDADO_CONCURRENCIA: z.coerce.number().default(1),
 });
 
 export type Entorno = z.infer<typeof esquema>;

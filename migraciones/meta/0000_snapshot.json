@@ -1,9 +1,248 @@
 {
-  "id": "a3f2c21e-2e1b-4510-bf27-bc41f0ec6e3d",
+  "id": "c9c7dc6b-1fbe-45f6-907f-ab6fe6b029db",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
+    "public.trabajos_de_bordado": {
+      "name": "trabajos_de_bordado",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "diseno_hash": {
+          "name": "diseno_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "comprador_id": {
+          "name": "comprador_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "producto_id": {
+          "name": "producto_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "lado": {
+          "name": "lado",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "estado": {
+          "name": "estado",
+          "type": "estado_bordado",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'QUEUED'"
+        },
+        "version_esquema": {
+          "name": "version_esquema",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "version_perfil": {
+          "name": "version_perfil",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "version_motor": {
+          "name": "version_motor",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ancho_mm": {
+          "name": "ancho_mm",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "alto_mm": {
+          "name": "alto_mm",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "intentos": {
+          "name": "intentos",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "decision": {
+          "name": "decision",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "confianza": {
+          "name": "confianza",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "incidencias": {
+          "name": "incidencias",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::jsonb"
+        },
+        "metricas": {
+          "name": "metricas",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "clave_dst": {
+          "name": "clave_dst",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "clave_vista": {
+          "name": "clave_vista",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "clave_metadatos": {
+          "name": "clave_metadatos",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "clave_entrada": {
+          "name": "clave_entrada",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "hashes": {
+          "name": "hashes",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "codigo_error": {
+          "name": "codigo_error",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "empezado_en": {
+          "name": "empezado_en",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "terminado_en": {
+          "name": "terminado_en",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "creado_en": {
+          "name": "creado_en",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "actualizado_en": {
+          "name": "actualizado_en",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "trabajos_de_bordado_comprador": {
+          "name": "trabajos_de_bordado_comprador",
+          "columns": [
+            {
+              "expression": "comprador_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "creado_en",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "trabajos_de_bordado_hash": {
+          "name": "trabajos_de_bordado_hash",
+          "columns": [
+            {
+              "expression": "diseno_hash",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "trabajos_de_bordado_comprador_id_compradores_id_fk": {
+          "name": "trabajos_de_bordado_comprador_id_compradores_id_fk",
+          "tableFrom": "trabajos_de_bordado",
+          "tableTo": "compradores",
+          "columnsFrom": [
+            "comprador_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "trabajos_de_bordado_producto_id_productos_id_fk": {
+          "name": "trabajos_de_bordado_producto_id_productos_id_fk",
+          "tableFrom": "trabajos_de_bordado",
+          "tableTo": "productos",
+          "columnsFrom": [
+            "producto_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.categorias": {
       "name": "categorias",
       "schema": "",
@@ -3593,6 +3832,17 @@
     }
   },
   "enums": {
+    "public.estado_bordado": {
+      "name": "estado_bordado",
+      "schema": "public",
+      "values": [
+        "QUEUED",
+        "PROCESSING",
+        "READY",
+        "REVIEW",
+        "FAILED"
+      ]
+    },
     "public.estado_evento": {
       "name": "estado_evento",
       "schema": "public",

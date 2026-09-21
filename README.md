@@ -250,6 +250,46 @@ Cargar una plantilla devuelve **tres listas**, porque hay tres desenlaces:
 copiar) y `perdidos` (ya no se publica). El último es el único que **obliga a
 decidir**: meterlo al carrito sólo movería el fallo al final del checkout.
 
+## El bordado
+
+**Está apagado** (`BORDADO_ACTIVO=false`). Los parámetros del perfil salieron
+de un spike y no tienen validación física: nadie ha cosido todavía un diseño
+preparado con esto. Hasta que haya test-sew no se conecta al checkout ni al
+taller, y con la variable en falso las rutas contestan **404** — para quien no
+la tiene activada, esta función no existe.
+
+**El motor es Python** —Ink/Stitch y pyembroidery— y no se reescribe: no hay
+equivalente en TypeScript de lo que hace. Lo que cambió es quién habla con el
+mundo. Antes el Python leía de SQS, tomaba el trabajo en DynamoDB, bajaba el
+diseño de S3, subía los artefactos y escribía el resultado; ahora es una
+**función**:
+
+```bash
+python3 motor.py <design.json> <carpeta>   # imprime el resultado en JSON
+```
+
+La cola, la base y S3 los lleva el proceso de TypeScript que lo invoca. El
+Python no conoce ninguna credencial.
+
+**Vive en su propia imagen** (`servicios/bordado/Dockerfile`), porque
+Ink/Stitch, GTK y xvfb son cientos de megas por algo que hoy está apagado:
+
+```bash
+docker compose --profile bordado up bordado
+```
+
+Es el único sitio donde `BORDADO_ACTIVO` va en true: encenderlo en la imagen de
+la API haría que los trabajos se tomaran —y se marcaran como `PROCESSING`—
+para morir enseguida sin motor que los atienda.
+
+**Los trabajos son idempotentes por construcción**: el id sale de quién pide
+más el hash del diseño, así que el mismo dibujo del mismo comprador da el mismo
+trabajo. Preparar cuesta hasta 75 segundos de CPU y un doble clic no los puede
+pagar dos veces.
+
+`READY` y `REVIEW` son **ambos** un éxito. La diferencia es lo único que separa
+hoy un bordado revisado de uno que nadie miró.
+
 ## Probarlo
 
 ```bash
@@ -258,6 +298,7 @@ pnpm probar:envios     # limitador, cotización guardada, webhook, carrito, cuen
 pnpm probar:admin      # plantillas, categorías, revisión, paquetes y subidas
 pnpm probar:taller     # productos, existencias, perfil y el canal en vivo
 pnpm probar:plantillas # la receta, el arte propio y la vuelta al carrito
+pnpm probar:bordado    # el interruptor, el contrato, la idempotencia y la toma
 ```
 
 `probar:plantillas` **toca S3 de verdad**: firma una subida, sube un PNG
@@ -280,6 +321,6 @@ recotización y el webhook de rastreo), los **correos** del pedido, el
 Portado también: **el backoffice entero**, **el panel del taller** —sus
 productos, sus existencias y su perfil— y **el canal en vivo**.
 
-Portado también: las **plantillas de compra**.
+Portado también: las **plantillas de compra** y el **bordado**.
 
-Pendiente: los **eventos** y el **worker de bordado**.
+Pendiente: los **eventos**.

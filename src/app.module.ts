@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 import { AdminModule } from "./admin/admin.module";
 import { AlmacenModule } from "./almacen/almacen.module";
 import { AuthModule } from "./auth/auth.module";
+import { BordadoModule } from "./bordado/bordado.module";
 import { AvisosModule } from "./avisos/avisos.module";
 import { CatalogoModule } from "./catalogo/catalogo.module";
 import { ColasModule } from "./colas/colas.module";
@@ -31,6 +32,7 @@ import { VivoModule } from "./vivo/vivo.module";
 		CuentaModule,
 		AdminModule,
 		TallerModule,
+		BordadoModule,
 		VivoModule,
 	],
 })

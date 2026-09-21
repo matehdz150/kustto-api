@@ -1,8 +1,38 @@
+CREATE TYPE "public"."estado_bordado" AS ENUM('QUEUED', 'PROCESSING', 'READY', 'REVIEW', 'FAILED');--> statement-breakpoint
 CREATE TYPE "public"."estado_evento" AS ENUM('borrador', 'publicado', 'cerrado');--> statement-breakpoint
 CREATE TYPE "public"."estado_pedido" AS ENUM('nuevo', 'produccion', 'listo', 'enviado', 'entregado', 'cancelado');--> statement-breakpoint
 CREATE TYPE "public"."estado_producto" AS ENUM('borrador', 'en_revision', 'activo', 'rechazado', 'archivado');--> statement-breakpoint
 CREATE TYPE "public"."metodo_entrega" AS ENUM('envio', 'recoger');--> statement-breakpoint
 CREATE TYPE "public"."estado_paquete" AS ENUM('borrador', 'activo', 'archivado');--> statement-breakpoint
+CREATE TABLE "trabajos_de_bordado" (
+	"id" text PRIMARY KEY NOT NULL,
+	"diseno_hash" text NOT NULL,
+	"comprador_id" text,
+	"producto_id" uuid,
+	"lado" text NOT NULL,
+	"estado" "estado_bordado" DEFAULT 'QUEUED' NOT NULL,
+	"version_esquema" integer NOT NULL,
+	"version_perfil" text NOT NULL,
+	"version_motor" text NOT NULL,
+	"ancho_mm" real NOT NULL,
+	"alto_mm" real NOT NULL,
+	"intentos" integer DEFAULT 0 NOT NULL,
+	"decision" text,
+	"confianza" real,
+	"incidencias" jsonb DEFAULT '[]'::jsonb NOT NULL,
+	"metricas" jsonb,
+	"clave_dst" text,
+	"clave_vista" text,
+	"clave_metadatos" text,
+	"clave_entrada" text NOT NULL,
+	"hashes" jsonb,
+	"codigo_error" text,
+	"empezado_en" timestamp with time zone,
+	"terminado_en" timestamp with time zone,
+	"creado_en" timestamp with time zone DEFAULT now() NOT NULL,
+	"actualizado_en" timestamp with time zone DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
 CREATE TABLE "categorias" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"nombre" text NOT NULL,
@@ -384,6 +414,8 @@ CREATE TABLE "talleres" (
 	"actualizado_en" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
+ALTER TABLE "trabajos_de_bordado" ADD CONSTRAINT "trabajos_de_bordado_comprador_id_compradores_id_fk" FOREIGN KEY ("comprador_id") REFERENCES "public"."compradores"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "trabajos_de_bordado" ADD CONSTRAINT "trabajos_de_bordado_producto_id_productos_id_fk" FOREIGN KEY ("producto_id") REFERENCES "public"."productos"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "producto_categorias" ADD CONSTRAINT "producto_categorias_producto_id_productos_id_fk" FOREIGN KEY ("producto_id") REFERENCES "public"."productos"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "producto_categorias" ADD CONSTRAINT "producto_categorias_categoria_id_categorias_id_fk" FOREIGN KEY ("categoria_id") REFERENCES "public"."categorias"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "producto_colores" ADD CONSTRAINT "producto_colores_producto_id_productos_id_fk" FOREIGN KEY ("producto_id") REFERENCES "public"."productos"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -428,6 +460,8 @@ ALTER TABLE "pedido_partidas" ADD CONSTRAINT "pedido_partidas_pedido_id_pedidos_
 ALTER TABLE "pedido_partidas" ADD CONSTRAINT "pedido_partidas_producto_id_productos_id_fk" FOREIGN KEY ("producto_id") REFERENCES "public"."productos"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "pedidos" ADD CONSTRAINT "pedidos_compra_id_compras_id_fk" FOREIGN KEY ("compra_id") REFERENCES "public"."compras"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "pedidos" ADD CONSTRAINT "pedidos_taller_id_talleres_id_fk" FOREIGN KEY ("taller_id") REFERENCES "public"."talleres"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+CREATE INDEX "trabajos_de_bordado_comprador" ON "trabajos_de_bordado" USING btree ("comprador_id","creado_en");--> statement-breakpoint
+CREATE INDEX "trabajos_de_bordado_hash" ON "trabajos_de_bordado" USING btree ("diseno_hash");--> statement-breakpoint
 CREATE UNIQUE INDEX "categorias_slug_unico" ON "categorias" USING btree ("slug");--> statement-breakpoint
 CREATE INDEX "producto_categorias_categoria" ON "producto_categorias" USING btree ("categoria_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "producto_colores_unico" ON "producto_colores" USING btree ("producto_id","nombre");--> statement-breakpoint

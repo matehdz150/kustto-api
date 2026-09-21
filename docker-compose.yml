@@ -96,6 +96,34 @@ services:
       redis: { condition: service_healthy }
       migraciones: { condition: service_completed_successfully }
 
+  # El worker de BORDADO, en su propia imagen.
+  #
+  # NO ARRANCA POR DEFECTO: lleva Ink/Stitch, Python, GTK y xvfb, y hoy la
+  # preparación de bordado está apagada a la espera de las pruebas de costura.
+  # Se levanta a propósito:
+  #
+  #     docker compose --profile bordado up bordado
+  #
+  # Es el ÚNICO sitio donde `BORDADO_ACTIVO` va en true: encenderlo en la
+  # imagen normal haría que los trabajos se tomaran —y se marcaran como
+  # PROCESSING— para morir enseguida sin motor que los atienda.
+  bordado:
+    profiles: ["bordado"]
+    build:
+      context: .
+      dockerfile: servicios/bordado/Dockerfile
+    env_file: [.env]
+    environment:
+      DATABASE_URL: postgres://kustto:kustto@postgres:5432/kustto
+      REDIS_URL: redis://redis:6379
+      BORDADO_ACTIVO: "true"
+    volumes:
+      - ${HOME}/.aws:/home/node/.aws:ro
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      migraciones: { condition: service_completed_successfully }
+
 volumes:
   datos-postgres:
   datos-redis:

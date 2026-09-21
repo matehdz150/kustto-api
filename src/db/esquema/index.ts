@@ -5,6 +5,7 @@
  * llaves: la decisión más cara de deshacer, y por eso vive junta y no
  * desperdigada por los módulos.
  */
+export * from "./bordado";
 export * from "./catalogo";
 export * from "./compradores";
 export * from "./comun";

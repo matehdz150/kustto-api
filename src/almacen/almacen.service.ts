@@ -108,6 +108,88 @@ export class AlmacenService {
 		}
 	}
 
+	/**
+	 * Guarda un JSON en el bucket PRIVADO.
+	 *
+	 * Privado y no público: lo usa el bordado para el diseño de entrada, que es
+	 * un documento de trabajo y no un medio que nadie tenga que ver.
+	 */
+	async guardarJson(clave: string, contenido: unknown) {
+		await this.s3.send(
+			new PutObjectCommand({
+				Bucket: this.env.S3_BUCKET_PRIVADO,
+				Key: clave,
+				Body: JSON.stringify(contenido),
+				ContentType: "application/json",
+				ServerSideEncryption: "AES256",
+			}),
+		);
+	}
+
+	/**
+	 * Guarda un texto TAL CUAL en el bucket privado.
+	 *
+	 * Distinto de `guardarJson`, y la diferencia importa: aquí los bytes son el
+	 * dato. El diseño de bordado se guarda con su serialización CANÓNICA
+	 * —claves ordenadas, sin `undefined`— porque su sha256 es el `designHash`
+	 * que el worker vuelve a comprobar. Con `JSON.stringify` los bytes salen
+	 * distintos y el hash no cuadra nunca.
+	 */
+	async guardarTexto(clave: string, contenido: string, tipo: string) {
+		await this.s3.send(
+			new PutObjectCommand({
+				Bucket: this.env.S3_BUCKET_PRIVADO,
+				Key: clave,
+				Body: contenido,
+				ContentType: tipo,
+				ServerSideEncryption: "AES256",
+			}),
+		);
+	}
+
+	/** Lee un objeto del bucket privado y lo devuelve como texto. */
+	async leerTexto(clave: string) {
+		const salida = await this.s3.send(
+			new GetObjectCommand({ Bucket: this.env.S3_BUCKET_PRIVADO, Key: clave }),
+		);
+
+		return salida.Body!.transformToString();
+	}
+
+	/**
+	 * Una URL firmada para LEER del bucket privado.
+	 *
+	 * El bucket nunca se abre, así que un artefacto de bordado —la vista previa
+	 * del diseño preparado— sólo se puede enseñar así. Caduca pronto a
+	 * propósito: es para pintarla ahora, no para guardarla.
+	 */
+	async urlParaLeer(clave: string, segundos = 900) {
+		return getSignedUrl(
+			this.s3,
+			new GetObjectCommand({ Bucket: this.env.S3_BUCKET_PRIVADO, Key: clave }),
+			{ expiresIn: segundos },
+		);
+	}
+
+	/** Sube un archivo del disco al bucket privado, con su suma de comprobación. */
+	async subirArchivo(
+		clave: string,
+		cuerpo: Buffer,
+		tipo: string,
+		sha256: string,
+	) {
+		await this.s3.send(
+			new PutObjectCommand({
+				Bucket: this.env.S3_BUCKET_PRIVADO,
+				Key: clave,
+				Body: cuerpo,
+				ContentType: tipo,
+				ServerSideEncryption: "AES256",
+				Metadata: { sha256 },
+			}),
+		);
+	}
+
 	/** Nunca lanza: borrar un objeto que ya no está es el resultado buscado. */
 	async borrar(clave: string) {
 		await this.s3

@@ -7,6 +7,8 @@ import { COLAS } from "../colas/colas";
 import { REDIS } from "../colas/colas.module";
 import { ENTORNO } from "../config/config.module";
 import type { Entorno } from "../config/entorno";
+import { type TrabajoDeBordado } from "../bordado/bordado.service";
+import { DigitalizadorService } from "../bordado/digitalizador.service";
 import { type Correo, CorreoService } from "../correo/correo.service";
 
 /**
@@ -29,6 +31,15 @@ async function arrancar() {
 	const app = await NestFactory.createApplicationContext(AppModule, {
 		bufferLogs: true,
 	});
+	/**
+	 * Sin esto los registros NUNCA SALEN.
+	 *
+	 * `bufferLogs` los guarda hasta que alguien los vacía, y en una aplicación
+	 * HTTP eso lo hace `listen()`. Un contexto sin servidor no llama a nadie,
+	 * así que este proceso llevaba arrancando mudo: ni el "workers en pie" ni
+	 * los errores de un trabajo fallido llegaban al registro del contenedor.
+	 */
+	app.flushLogs();
 	app.enableShutdownHooks();
 
 	const conexion = app.get<IORedis>(REDIS);
@@ -42,6 +53,38 @@ async function arrancar() {
 			{ connection: conexion, concurrency: 5 },
 		),
 	];
+
+	/**
+	 * El de bordado SÓLO se enciende donde está el motor.
+	 *
+	 * Ink/Stitch, Python, GTK y xvfb son cientos de megas que la imagen de la
+	 * API no lleva, así que este worker vive en la imagen `bordado` y se
+	 * arranca con `BORDADO_ACTIVO=true` ahí y sólo ahí. Encenderlo en la
+	 * imagen normal haría que los trabajos se tomaran —y se marcaran como
+	 * PROCESSING— para morir enseguida con `ENGINE_NOT_AVAILABLE`.
+	 *
+	 * CONCURRENCIA DE UNO por defecto: cada digitalización se come una CPU
+	 * entera durante más de un minuto, y dos a la vez en la misma máquina
+	 * hacen que las dos tarden el doble.
+	 */
+	if (env.BORDADO_ACTIVO) {
+		const digitalizador = app.get(DigitalizadorService);
+
+		workers.push(
+			new Worker<TrabajoDeBordado>(
+				COLAS.bordado,
+				async (trabajo) => digitalizador.procesar(trabajo.data),
+				{
+					connection: conexion,
+					concurrency: env.BORDADO_CONCURRENCIA,
+					/* El bloqueo tiene que durar más que el trabajo: con el de por
+					   defecto (30 s) BullMQ daría el trabajo por perdido a mitad de
+					   la digitalización y otro proceso lo tomaría. */
+					lockDuration: env.BORDADO_TIMEOUT_MS + 60_000,
+				},
+			) as never,
+		);
+	}
 
 	for (const worker of workers) {
 		worker.on("failed", (trabajo, error) => {
