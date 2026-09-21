@@ -10,13 +10,29 @@
 # un programa cualquiera. Separarlos en dos contenedores obligaría a inventar
 # un protocolo entre ellos —justo lo que se quitó al sacarle AWS al Python—.
 
+# EL BINARIO SE ELIGE POR ARQUITECTURA, y no es un detalle: Ink/Stitch se
+# distribuye compilado, así que meter el de x86_64 en un contenedor arm64 —un
+# Mac con Apple Silicon, o un servidor Graviton— lo deja arrancando y muriendo
+# con "rosetta error: failed to open elf". Desde fuera eso se ve como
+# `ENGINE_FAILED` y un DST de cero bytes, sin ninguna pista de que el problema
+# es la arquitectura. Pasó al construir esta imagen la primera vez.
+#
+# `TARGETARCH` lo pone buildx solo, con la del destino y no la del que compila.
 FROM ubuntu:24.04 AS inkstitch
+ARG TARGETARCH
 ARG INKSTITCH_VERSION=3.3.0
-ARG INKSTITCH_SHA256=8e6918e62dee98b8cdbb46a3aad12521b094d2608049abd7eda5771092e9835e
-ARG INKSTITCH_ARCH=linux-x86_64
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
       ca-certificates curl xz-utils \
- && curl -fsSL "https://github.com/inkstitch/inkstitch/releases/download/v${INKSTITCH_VERSION}/inkstitch-${INKSTITCH_VERSION}-${INKSTITCH_ARCH}.tar.xz" -o /tmp/inkstitch.tar.xz \
+ && case "${TARGETARCH}" in \
+      arm64) ARCHIVO="linux-aarch64"; SUMA="8e6918e62dee98b8cdbb46a3aad12521b094d2608049abd7eda5771092e9835e" ;; \
+      amd64) ARCHIVO="linux-x86_64";  SUMA="162bc16bfb80f18e2343050ab03ddb1c3b39c654fbc868a4a742a28d42ff1c79" ;; \
+      *) echo "Ink/Stitch no publica binario para ${TARGETARCH}" >&2; exit 1 ;; \
+    esac \
+ && curl -fsSL "https://github.com/inkstitch/inkstitch/releases/download/v${INKSTITCH_VERSION}/inkstitch-${INKSTITCH_VERSION}-${ARCHIVO}.tar.xz" -o /tmp/inkstitch.tar.xz \
+ # La suma se comprueba SIEMPRE: es un binario de 168 MB que se baja de
+ # internet en cada construcción y que después corre con los diseños de los
+ # clientes dentro.
+ && echo "${SUMA}  /tmp/inkstitch.tar.xz" | sha256sum -c - \
  && mkdir -p /opt/inkstitch \
  && tar -xJf /tmp/inkstitch.tar.xz -C /opt/inkstitch --strip-components=1
 

@@ -282,6 +282,12 @@ Es el único sitio donde `BORDADO_ACTIVO` va en true: encenderlo en la imagen de
 la API haría que los trabajos se tomaran —y se marcaran como `PROCESSING`—
 para morir enseguida sin motor que los atienda.
 
+**El binario de Ink/Stitch se elige por arquitectura.** Se distribuye
+compilado, así que el de x86_64 dentro de un contenedor arm64 —un Mac con
+Apple Silicon, un servidor Graviton— arranca y muere con `rosetta error`, que
+desde fuera se ve como un DST de cero bytes sin ninguna pista. Lo resuelve
+`TARGETARCH`, y la suma de comprobación se verifica siempre.
+
 **Los trabajos son idempotentes por construcción**: el id sale de quién pide
 más el hash del diseño, así que el mismo dibujo del mismo comprador da el mismo
 trabajo. Preparar cuesta hasta 75 segundos de CPU y un doble clic no los puede
