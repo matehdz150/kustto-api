@@ -182,12 +182,54 @@ local, el compose monta `~/.aws` de sólo lectura dentro del contenedor y
 `AWS_PROFILE` dice cuál usar. **En un servidor eso se borra** y las da el rol
 de la máquina.
 
+## El panel del taller
+
+**El taller escribe sus productos; el admin los revisa.** Sólo el admin puede
+poner un producto en `activo`, y **tocar uno activo lo devuelve a revisión** —
+es la regla que impide publicar algo inocuo, esperar el visto bueno y luego
+cambiarlo por otra cosa.
+
+**Las existencias van por su propia ruta**, y por dos razones: contar la bodega
+no es contenido que nadie tenga que aprobar (si pasara por el PATCH del
+producto, el taller se despublicaría al corregir su conteo), y **el delta lo
+aplica la base**, no el navegador — si el cliente leyera, sumara y
+reescribiera, un pedido que descuente en ese hueco se perdería.
+
+**Quitar un producto son dos cosas.** Un borrador se borra de verdad: nunca
+estuvo en el catálogo, así que nada puede apuntarle. Todo lo demás se
+**archiva** — sale del catálogo y de la lista del taller, pero la fila se queda
+porque "volver a pedir" la lee para poder decir cuál de las líneas se cayó.
+
+**La carpeta de las fotos sale del token, nunca del cuerpo.** Las credenciales
+de la API pueden escribir en todo `medios/productos/*` —IAM no sabe de
+talleres—, así que esa línea es lo único que impide que un taller escriba sobre
+las fotos de otro.
+
+## El canal en vivo
+
+Un WebSocket en `/eventos`, enganchado al **mismo servidor HTTP** que la API.
+El token viaja en la URL porque `new WebSocket(url)` no admite cabeceras, y se
+verifica contra el pool de talleres como cualquier otra ruta.
+
+**No se sirve ningún dato por ahí**: se manda un aviso corto —"entró un
+pedido"— y el navegador recarga su lista por la API de siempre. Mandar los
+datos convertiría el socket en una segunda API con las mismas reglas de qué ve
+cada taller.
+
+En AWS esto eran **cuatro piezas**: una API Gateway WebSocket, una Lambda
+autorizadora, una Lambda de conexión y una tabla de conexiones con TTL — porque
+nada en Lambda puede sostener un socket, así que había que apuntar en DynamoDB
+quién estaba conectado. Con un servidor, la conexión **es** el estado. Lo que
+sí hace falta es Redis: con varias instancias, la que atiende el checkout casi
+nunca es la que tiene abierta la conexión del taller.
+
 ## Probarlo
 
 ```bash
 pnpm probar:pedidos    # el ciclo del pedido: transiciones, cancelación, carreras
 pnpm probar:envios     # limitador, cotización guardada, webhook, carrito, cuenta
 pnpm probar:admin      # plantillas, categorías, revisión, paquetes y subidas
+pnpm probar:taller     # productos, existencias, perfil y el canal en vivo
 ```
 
 Corren contra la base de `docker compose` y por el código real, no por HTTP:
@@ -203,11 +245,8 @@ recotización y el webhook de rastreo), los **correos** del pedido, el
 **carrito**, el **perfil**, los **favoritos**, los **diseños guardados** y la
 **biblioteca de imágenes**.
 
-Portado también: **el backoffice entero** —plantillas de prenda, categorías,
-revisión de productos, alta de talleres, subidas y paquetes— más las rutas que
-sirven los archivos del bucket.
+Portado también: **el backoffice entero**, **el panel del taller** —sus
+productos, sus existencias y su perfil— y **el canal en vivo**.
 
-Pendiente: las **plantillas de compra** de `/cuenta`, los **eventos**, los
-**productos del taller** y su perfil, el **canal en vivo** por WebSocket (el
-aviso ya se publica en Redis; falta el gateway que lo lea) y el **worker de
-bordado**.
+Pendiente: las **plantillas de compra** de `/cuenta`, los **eventos** y el
+**worker de bordado**.

@@ -83,16 +83,32 @@ async function principal() {
 		const turno = () => (skydropx as any).turno();
 		await redis.del(`skydropx:rps:${Math.floor(Date.now() / 1000)}`);
 
-		const arranque = Date.now();
-		await Promise.all([turno(), turno(), turno(), turno()]);
-		const tardo = Date.now() - arranque;
+		/* SE CUENTA POR VENTANA, no se mide el tiempo que tardó.
+		
+		   Medir el tiempo era una prueba floja y fallaba sola: la espera va hasta
+		   el borde del segundo siguiente, así que si las llamadas arrancan a 775
+		   ms de la ventana sólo esperan 225 y el limitador es igual de correcto.
+		   La propiedad de verdad es cuántas pasan en el mismo segundo. */
+		const ventanas: number[] = [];
+		await Promise.all(
+			Array.from({ length: 6 }, () =>
+				turno().then(() => ventanas.push(Math.floor(Date.now() / 1000))),
+			),
+		);
 
-		/* Cuatro turnos a dos por segundo: los dos primeros pasan de inmediato y
-		   los otros dos esperan a la ventana siguiente. */
+		const porVentana = new Map<number, number>();
+		for (const v of ventanas) porVentana.set(v, (porVentana.get(v) ?? 0) + 1);
+		const masLlena = Math.max(...porVentana.values());
+
 		comprobar(
-			"cuatro llamadas seguidas esperan al menos una ventana",
-			tardo >= 500,
-			`${tardo} ms`,
+			"nunca pasan más de dos por segundo",
+			masLlena <= 2,
+			`${[...porVentana.values()].join("+")} en ${porVentana.size} ventanas`,
+		);
+		comprobar(
+			"y las seis acaban pasando",
+			ventanas.length === 6,
+			`${ventanas.length}`,
 		);
 	}
 

@@ -12,6 +12,8 @@ import { DbModule } from "./db/db.module";
 import { EnviosModule } from "./envios/envios.module";
 import { PedidosModule } from "./pedidos/pedidos.module";
 import { SaludModule } from "./salud/salud.module";
+import { TallerModule } from "./taller/taller.module";
+import { VivoModule } from "./vivo/vivo.module";
 
 @Module({
 	imports: [
@@ -28,6 +30,8 @@ import { SaludModule } from "./salud/salud.module";
 		PedidosModule,
 		CuentaModule,
 		AdminModule,
+		TallerModule,
+		VivoModule,
 	],
 })
 export class AppModule {}

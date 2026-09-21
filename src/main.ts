@@ -3,6 +3,7 @@ import { NestFactory } from "@nestjs/core";
 import { AppModule } from "./app.module";
 import { ENTORNO } from "./config/config.module";
 import type { Entorno } from "./config/entorno";
+import { VivoGateway } from "./vivo/vivo.gateway";
 
 async function arrancar() {
 	const app = await NestFactory.create(AppModule, {
@@ -40,6 +41,27 @@ async function arrancar() {
 	app.enableCors({
 		origin: env.ORIGENES.split(",").map((o) => o.trim()),
 		credentials: true,
+	});
+
+	/**
+	 * El canal en vivo, enganchado al MISMO servidor HTTP.
+	 *
+	 * Un puerto aparte serían otra regla en el balanceador, otro certificado y
+	 * otro agujero que abrir. Se atiende sólo `/eventos`: cualquier otro
+	 * `upgrade` se corta, para que abrir un socket contra una ruta cualquiera
+	 * no deje una conexión colgada.
+	 */
+	const vivo = app.get(VivoGateway);
+
+	app.getHttpServer().on("upgrade", (peticion: any, socket: any, cabeza: any) => {
+		const ruta = new URL(peticion.url ?? "", "http://interno").pathname;
+
+		if (ruta !== "/eventos") {
+			socket.destroy();
+			return;
+		}
+
+		vivo.enganchar(peticion, socket, cabeza);
 	});
 
 	await app.listen(env.PORT, "0.0.0.0");
