@@ -2,20 +2,17 @@ import {
 	BadRequestException,
 	ConflictException,
 	ForbiddenException,
-	HttpException,
-	HttpStatus,
 	Inject,
 	Injectable,
 	UnauthorizedException,
 } from "@nestjs/common";
 import { and, eq } from "drizzle-orm";
-import type IORedis from "ioredis";
-import { REDIS } from "../colas/colas.module";
 import { DB, type Db } from "../db/db.module";
 import * as e from "../db/esquema";
 import { comprobar, hashear, problemaDeContrasena } from "./contrasenas";
 import { type Meta, SesionesService } from "./sesiones.service";
 import type { TipoDeUsuario } from "./tipos";
+import { TopesService } from "./topes.service";
 
 const CORREO = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -44,7 +41,7 @@ const MAL = "Correo o contraseña incorrectos";
 export class CuentasService {
 	constructor(
 		@Inject(DB) private readonly db: Db,
-		@Inject(REDIS) private readonly redis: IORedis,
+		private readonly topes: TopesService,
 		private readonly sesiones: SesionesService,
 	) {}
 
@@ -65,8 +62,10 @@ export class CuentasService {
 		/* El tope va ANTES de mirar la base y de correr argon2: si no, un ataque
 		   sigue costándonos CPU aunque lo estemos rechazando. */
 		const claveCorreo = `entrar:${tipo}:${correo}`;
-		await this.contar(claveCorreo, TOPE_POR_CORREO);
-		if (meta.ip) await this.contar(`entrar-ip:${meta.ip}`, TOPE_POR_IP);
+		await this.topes.contar(claveCorreo, TOPE_POR_CORREO, VENTANA_S);
+		if (meta.ip) {
+			await this.topes.contar(`entrar-ip:${meta.ip}`, TOPE_POR_IP, VENTANA_S);
+		}
 
 		const [usuario] = await this.db
 			.select()
@@ -84,7 +83,7 @@ export class CuentasService {
 		/* Contraseña correcta: el contador de ese correo vuelve a cero. Sin esto,
 		   quien se equivoca cuatro veces y acierta a la quinta queda a un error
 		   de bloquearse durante un cuarto de hora. */
-		await this.redis.del(claveCorreo);
+		await this.topes.olvidar(claveCorreo);
 
 		/* Aquí sí se dice qué pasa: ya demostró que la contraseña es suya, y el
 		   front necesita saberlo para llevarlo a la pantalla del código. Es el
@@ -157,21 +156,5 @@ export class CuentasService {
 		if (!creado)
 			throw new ConflictException("Ya hay una cuenta con ese correo");
 		return creado;
-	}
-
-	/** Suma un intento y corta al pasarse del tope. */
-	private async contar(clave: string, tope: number) {
-		const n = await this.redis.incr(clave);
-		/* El plazo se pone con el PRIMER intento y no se renueva: una ventana
-		   fija. Renovarlo en cada intento dejaría bloqueado para siempre a quien
-		   sigue probando cada diez minutos. */
-		if (n === 1) await this.redis.expire(clave, VENTANA_S);
-
-		if (n > tope) {
-			throw new HttpException(
-				"Demasiados intentos. Espera unos minutos y vuelve a probar.",
-				HttpStatus.TOO_MANY_REQUESTS,
-			);
-		}
 	}
 }

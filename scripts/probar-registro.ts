@@ -65,7 +65,7 @@ async function principal() {
 			?.asunto.slice(0, 6) ?? "";
 	/** Quita la espera entre envíos, que en una prueba sólo estorba. */
 	const sinEspera = async () => {
-		for (const k of await redis.keys("codigo-*")) await redis.del(k);
+		for (const k of await redis.keys("envio-*")) await redis.del(k);
 	};
 
 	try {
@@ -316,7 +316,7 @@ async function principal() {
 			.delete(e.compradores)
 			.where(like(e.compradores.correo, `%${SUFIJO}`));
 		await db.delete(e.usuarios).where(like(e.usuarios.correo, `%${SUFIJO}`));
-		for (const k of await redis.keys("codigo-*")) await redis.del(k);
+		for (const k of await redis.keys("envio-*")) await redis.del(k);
 		for (const k of await redis.keys(`entrar*${SUFIJO}`)) await redis.del(k);
 		await redis.del(`registrar-ip:${meta.ip}`, `entrar-ip:${meta.ip}`);
 		await app.close();

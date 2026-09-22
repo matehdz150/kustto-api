@@ -19,6 +19,7 @@ import { borrarCookies, ponerCookies } from "./cookies";
 import { CuentasService } from "./cuentas.service";
 import { JwtService } from "./jwt.service";
 import { RegistroService } from "./registro.service";
+import { RestablecerService } from "./restablecer.service";
 import { type Meta, SesionesService } from "./sesiones.service";
 import {
 	cookieDeAcceso,
@@ -41,6 +42,7 @@ export class CuentasController {
 		private readonly sesiones: SesionesService,
 		private readonly jwt: JwtService,
 		private readonly registro: RegistroService,
+		private readonly restablecimiento: RestablecerService,
 	) {}
 
 	@Post("entrar")
@@ -174,6 +176,52 @@ export class CuentasController {
 	) {
 		await this.soloComprador(tipo);
 		return this.registro.reenviar(cuerpo);
+	}
+
+	/* ─── Olvidé mi contraseña ──────────────────────────────────────────────
+	   Para los tres tipos. Es también como crea su primera contraseña quien
+	   viene de Cognito o entraba sólo con Google. */
+
+	/** Manda el enlace. Contesta igual haya cuenta o no. */
+	@Post("olvide")
+	@HttpCode(200)
+	async olvide(
+		@Param("tipo") tipo: string,
+		@Body() cuerpo: Record<string, unknown>,
+		@Req() req: Request,
+	) {
+		const t = await this.tipoActivo(tipo);
+		return this.restablecimiento.olvide(t, cuerpo, metaDe(req));
+	}
+
+	/** Si el enlace sirve, sin gastarlo: la página lo pregunta al abrirse. */
+	@Post("restablecer/comprobar")
+	@HttpCode(200)
+	async comprobarEnlace(
+		@Param("tipo") tipo: string,
+		@Body() cuerpo: Record<string, unknown>,
+	) {
+		const t = await this.tipoActivo(tipo);
+		return this.restablecimiento.comprobar(t, cuerpo);
+	}
+
+	/** Pone la contraseña nueva, cierra las demás sesiones y abre ésta. */
+	@Post("restablecer")
+	@HttpCode(200)
+	async restablecer(
+		@Param("tipo") tipo: string,
+		@Body() cuerpo: Record<string, unknown>,
+		@Req() req: Request,
+		@Res({ passthrough: true }) res: Response,
+	) {
+		const t = await this.tipoActivo(tipo);
+		const { emitidos, usuario } = await this.restablecimiento.restablecer(
+			t,
+			cuerpo,
+			metaDe(req),
+		);
+		ponerCookies(res, this.env, t, emitidos);
+		return this.cuentas.yo(t, usuario.id);
 	}
 
 	private async soloComprador(tipo: string) {

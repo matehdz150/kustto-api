@@ -706,3 +706,105 @@ export function codigoDeVerificacion(datos: {
 		html,
 	};
 }
+
+/* ─── Cuentas: restablecer la contraseña ─────────────────────────────────── */
+
+/**
+ * El enlace para crear una contraseña nueva.
+ *
+ * EL TOKEN VA EN EL FRAGMENTO (`#…`), NO EN LA QUERY. El fragmento no viaja
+ * al servidor: no queda en los logs del proxy ni del CDN, y el navegador no lo
+ * manda en el `Referer` si la página enlaza a otro sitio. La página lo lee con
+ * JavaScript y lo borra de la barra.
+ *
+ * Sirve también para quien NUNCA tuvo contraseña aquí —los que vienen de
+ * Cognito, los que entraban sólo con Google—: por eso el texto dice "crear o
+ * cambiar" y no sólo "recuperar".
+ */
+export function enlaceParaRestablecer(datos: {
+	para: string;
+	nombre: string | null;
+	tipo: string;
+	token: string;
+	/** Minutos que vale. */
+	vigencia: number;
+}): Correo {
+	const url = `${SITIO}/restablecer#tipo=${encodeURIComponent(datos.tipo)}&token=${encodeURIComponent(datos.token)}`;
+	const saludo = datos.nombre ? `Hola ${datos.nombre},` : "Hola,";
+
+	const texto = [
+		saludo,
+		"",
+		"Pediste crear o cambiar tu contraseña de Kustto. Hazlo aquí:",
+		url,
+		"",
+		`El enlace vale ${datos.vigencia} minutos y sirve una sola vez.`,
+		"Si no fuiste tú, ignora este correo: tu contraseña no cambia.",
+	].join("\n");
+
+	const html = envoltorio(
+		"Tu contraseña",
+		`El enlace vale ${datos.vigencia} minutos.`,
+		encabezado(
+			"Tu cuenta",
+			"Crea una contraseña nueva",
+			`${esc(saludo)} pediste crear o cambiar tu contraseña de Kustto.`,
+		) +
+			boton(url, "Crear contraseña") +
+			nota(
+				`El enlace vale ${datos.vigencia} minutos y sirve una sola vez. Si no fuiste tú, ignora este correo: tu contraseña no cambia.`,
+			) +
+			FIN,
+	);
+
+	return {
+		para: datos.para,
+		asunto: "Crea tu contraseña de Kustto",
+		texto,
+		html,
+	};
+}
+
+/**
+ * El aviso de que la contraseña cambió.
+ *
+ * ES LA ALARMA si no fue la persona: sin él, quien le robó el correo por un
+ * rato y cambió la contraseña tendría la cuenta sin que nadie se enterara.
+ */
+export function contrasenaCambiada(datos: {
+	para: string;
+	nombre: string | null;
+}): Correo {
+	const saludo = datos.nombre ? `Hola ${datos.nombre},` : "Hola,";
+
+	const texto = [
+		saludo,
+		"",
+		"Tu contraseña de Kustto acaba de cambiar, y cerramos las sesiones que tenías abiertas.",
+		"",
+		"Si fuiste tú, no tienes que hacer nada.",
+		"Si NO fuiste tú, responde a este correo ahora y lo revisamos.",
+	].join("\n");
+
+	const html = envoltorio(
+		"Tu contraseña cambió",
+		"Si no fuiste tú, respóndenos ahora.",
+		encabezado(
+			"Tu cuenta",
+			"Tu contraseña cambió",
+			`${esc(saludo)} acabamos de cambiar tu contraseña y cerramos las sesiones que tenías abiertas.`,
+		) +
+			nota(
+				`<strong style="color:${HUESO};">¿No fuiste tú?</strong> Responde a este correo ahora y lo revisamos. Si fuiste tú, no tienes que hacer nada.`,
+				LAVANDA,
+			) +
+			FIN,
+	);
+
+	return {
+		para: datos.para,
+		asunto: "Tu contraseña de Kustto cambió",
+		texto,
+		html,
+	};
+}

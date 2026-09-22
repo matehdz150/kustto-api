@@ -8,9 +8,8 @@ import {
 } from "@nestjs/common";
 import type { Queue } from "bullmq";
 import { and, desc, eq, gt, isNull, lt, ne, sql } from "drizzle-orm";
-import type IORedis from "ioredis";
 import { COLAS } from "../colas/colas";
-import { COLA, REDIS } from "../colas/colas.module";
+import { COLA } from "../colas/colas.module";
 import type { Correo } from "../correo/correo.service";
 import { codigoDeVerificacion } from "../correo/plantillas";
 import { DB, type Db } from "../db/db.module";
@@ -19,6 +18,7 @@ import { hashear, problemaDeContrasena } from "./contrasenas";
 import { CuentasService } from "./cuentas.service";
 import { JwtService } from "./jwt.service";
 import { type Meta, SesionesService } from "./sesiones.service";
+import { TopesService } from "./topes.service";
 
 const CORREO = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -27,13 +27,7 @@ const VIGENCIA_H = 24;
 /** Al quinto fallo el código muere: seis dígitos se adivinan sin tope. */
 const MAX_INTENTOS = 5;
 
-/**
- * Los topes de mandar correo. SIN ELLOS, "reenviar código" es un botón para
- * llenarle la bandeja a cualquiera —y para quemar la reputación del
- * remitente, que es la que decide si los correos de pedidos llegan—.
- */
-const ESPERA_ENTRE_ENVIOS_S = 60;
-const ENVIOS_POR_HORA = 5;
+/** Los de envío por cuenta viven en `TopesService.envio`. */
 const REGISTROS_POR_IP_HORA = 10;
 
 type Usuario = typeof e.usuarios.$inferSelect;
@@ -61,7 +55,7 @@ function error(
 export class RegistroService {
 	constructor(
 		@Inject(DB) private readonly db: Db,
-		@Inject(REDIS) private readonly redis: IORedis,
+		private readonly topes: TopesService,
 		@Inject(COLA(COLAS.correo)) private readonly correos: Queue<Correo>,
 		private readonly cuentas: CuentasService,
 		private readonly sesiones: SesionesService,
@@ -89,7 +83,7 @@ export class RegistroService {
 		if (problema) throw error(HttpStatus.BAD_REQUEST, "contrasena", problema);
 
 		if (meta.ip) {
-			await this.tope(
+			await this.topes.contar(
 				`registrar-ip:${meta.ip}`,
 				REGISTROS_POR_IP_HORA,
 				60 * 60,
@@ -377,27 +371,13 @@ export class RegistroService {
 	 * Los topes de envío. Se llaman ANTES de cambiar nada, por eso no viven
 	 * dentro de `emitirCodigo`.
 	 */
-	private async contarEnvio(usuarioId: string) {
-		await this.tope(`codigo-espera:${usuarioId}`, 1, ESPERA_ENTRE_ENVIOS_S);
-		await this.tope(`codigo-hora:${usuarioId}`, ENVIOS_POR_HORA, 60 * 60);
+	private contarEnvio(usuarioId: string) {
+		return this.topes.envio("verificar_correo", usuarioId);
 	}
 
 	/** El usuario va en la huella: el mismo código no vale para otra cuenta. */
 	private huella(usuarioId: string, codigo: string) {
 		return this.jwt.huellaSecreta(`verificar_correo:${usuarioId}:${codigo}`);
-	}
-
-	/** Un tope de Redis en ventana fija. Ver `CuentasService.contar`. */
-	private async tope(clave: string, maximo: number, ventanaS: number) {
-		const n = await this.redis.incr(clave);
-		if (n === 1) await this.redis.expire(clave, ventanaS);
-		if (n > maximo) {
-			throw error(
-				HttpStatus.TOO_MANY_REQUESTS,
-				"limite",
-				"Espera un momento antes de pedir otro código.",
-			);
-		}
 	}
 }
 

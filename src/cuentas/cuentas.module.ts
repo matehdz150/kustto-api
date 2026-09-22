@@ -3,7 +3,9 @@ import { CuentasController } from "./cuentas.controller";
 import { CuentasService } from "./cuentas.service";
 import { JwtService } from "./jwt.service";
 import { RegistroService } from "./registro.service";
+import { RestablecerService } from "./restablecer.service";
 import { SesionesService } from "./sesiones.service";
+import { TopesService } from "./topes.service";
 
 /**
  * Las cuentas propias, que reemplazan a Cognito.
@@ -14,7 +16,14 @@ import { SesionesService } from "./sesiones.service";
 @Global()
 @Module({
 	controllers: [CuentasController],
-	providers: [JwtService, SesionesService, CuentasService, RegistroService],
+	providers: [
+		JwtService,
+		SesionesService,
+		TopesService,
+		CuentasService,
+		RegistroService,
+		RestablecerService,
+	],
 	exports: [JwtService, SesionesService, CuentasService],
 })
 export class CuentasModule {}

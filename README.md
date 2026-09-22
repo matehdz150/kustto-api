@@ -102,8 +102,26 @@ Sin `JWT_LLAVE_PRIVADA`, `/auth/*` responde 503 y todo sigue como antes.
 pnpm probar:registro
 ```
 
-Falta: "olvidé mi contraseña", Google, invitación de talleres, traer los 7
-usuarios de Cognito y el front.
+**Olvidé mi contraseña** (`/auth/<tipo>/olvide`, `restablecer/comprobar`,
+`restablecer`), para los tres tipos:
+
+- Manda un enlace de un solo uso que vale 1 hora. **El token va en el
+  fragmento** (`/restablecer#tipo=…&token=…`): no viaja al servidor, no queda
+  en logs y no se filtra en el `Referer`. Los enlaces usan `KUSTTO_SITIO`.
+- Restablecer **cierra todas las sesiones** abiertas, abre una nueva, da el
+  correo por verificado, quita el bloqueo por intentos y manda un aviso de
+  "tu contraseña cambió".
+- Es también como crea su **primera** contraseña quien viene de Cognito o
+  entraba sólo con Google.
+- Contesta igual haya cuenta o no, y el tope de envíos se cuenta también para
+  los correos sin cuenta: un 429 no delata nada.
+
+```bash
+pnpm probar:restablecer
+```
+
+Falta: Google, invitación de talleres, traer los 7 usuarios de Cognito, y
+las pantallas del front (entre ellas `/restablecer`, que todavía no existe).
 
 ## Traer los datos de DynamoDB
 
