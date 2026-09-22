@@ -3,8 +3,8 @@
 La API de Kustto. NestJS + PostgreSQL (Drizzle) + Redis (BullMQ), en Docker.
 
 Sustituye a la infraestructura serverless de AWS: seis Lambdas detrás de una
-API Gateway, con DynamoDB de tabla única, SQS y SES. **Se quedan S3 y
-Cognito**, y nada más.
+API Gateway, con DynamoDB de tabla única, SQS y SES. De AWS sólo se conserva
+S3; las cuentas y sesiones ya son propias.
 
 ## Puesta en marcha
 
@@ -15,16 +15,51 @@ docker compose up
 
 Levanta Postgres, Redis, aplica las migraciones y arranca la API y los
 workers. La API queda en `http://localhost:8001`.
+Mailpit captura los correos locales en `http://localhost:8026`; no los envía
+a destinatarios reales. Fuera de Docker, usa `SMTP_URL=smtp://localhost:1026`
+al ejecutar scripts que mandan invitaciones.
 
 **Los puertos del host no son los de dentro** (8001, 5434, 6381): en esta
 máquina ya corre otro compose con 8000, 5432/5433 y 6379/6380 ocupados. Dentro
 de la red de Docker los servicios se llaman por su nombre y esto no importa; se
 cambia con `PUERTO_API`, `PUERTO_POSTGRES` y `PUERTO_REDIS`.
 
-**S3 y Cognito no están en el compose, a propósito.** Emularlos en local
-—localstack, un pool falso— da un sistema que funciona en una máquina y se rompe
-en el primer despliegue por una diferencia de la emulación. Se habla con los de
-verdad, con las credenciales del `.env`.
+**S3 no está en el compose, a propósito.** Se habla con el bucket real usando
+las credenciales del `.env`; las cuentas sí viven por completo en Postgres.
+
+## La semilla
+
+Una base local con la que se puede trabajar: cuentas, catálogo con fotos del
+bucket y pedidos en todos los estados.
+
+```bash
+pnpm db:sembrar                 # sobre una base recién migrada
+pnpm db:sembrar --desde-cero    # VACÍA la base local y siembra
+```
+
+Todas las cuentas usan la contraseña `kustto-local-2026` (o
+`SEMILLA_CONTRASENA`):
+
+| Cuenta | Correo | Entra en |
+|---|---|---|
+| Admin | `admin@kustto.test` | `/admin/entrar` |
+| Taller | `hilo-norte@kustto.test`, `la-prensa@kustto.test`, `punto-y-aparte@kustto.test` | `/proveedor/login` |
+| Comprador | `comprador@kustto.test` | `/cuenta/entrar` |
+
+- **El catálogo sale de `semilla/catalogo.json`**, que se escribe con
+  `pnpm db:exportar-semilla` a partir de una base local que valga la pena
+  repetir. El exportador pide al bucket CADA ruta antes de escribirla y deja
+  fuera lo que no existe: la base local tenía productos de prueba apuntando a
+  `/medios/productos/x.png`.
+- **Los pedidos usan arte real** (los archivos de producción de pedidos que sí
+  se hicieron), con compradores y direcciones inventados. El exportador no
+  copia datos de personas.
+- **Los precios salen de `extraPorLados`**, la misma regla con la que cobra la
+  API, y cada pedido cuadra con sus partidas y su compra.
+- `Punto y Aparte` no tiene dirección de recolección a propósito: así se ve el
+  aviso del panel y sus pedidos son para recoger.
+- Sólo corre contra `localhost`/`postgres`. Es determinista: mismos ids y
+  folios en cada corrida; las fechas se cuentan hacia atrás desde hoy.
 
 ## Antes de abrir un PR
 
@@ -41,27 +76,32 @@ más dos cosas que en local se olvidan: que **el esquema y las migraciones
 cuadren** y que las migraciones **se apliquen sobre una base vacía**, dos veces.
 También construye la imagen, y al llegar a `main` la publica en GHCR.
 
-**Los `probar:*` no corren en CI**: hablan con S3 y Cognito de verdad, y eso
-serían credenciales de producción en un runner. Se corren a mano.
+**Los `probar:*` no corren en CI**: algunos hablan con S3 de verdad. Se corren
+a mano.
 
 **`useImportType` está apagada en Biome a propósito** (ver `biome.jsonc`): su
 arreglo automático convierte en `import type` las clases que Nest inyecta, y la
 API deja de arrancar.
 
-## Cuentas propias (reemplazan a Cognito)
+## Cuentas propias
 
-**A medias, a propósito.** El módulo `src/cuentas/` ya entra, renueva y sale
-para los tres tipos, pero el front sigue en Cognito. Mientras dura la mudanza
-**los guards aceptan las dos cosas**: la cookie `kustto_acceso_<tipo>` con
-nuestro JWT y, si no la hay, el `Bearer` de Cognito. Los servicios no notan la
-diferencia: los dos caminos dejan el mismo `Identidad`.
+El módulo `src/cuentas/` entra, renueva y sale para compradores, talleres y
+administradores. Los guards sólo aceptan la cookie propia correspondiente.
 
 ```bash
 pnpm auth:llave              # imprime JWT_LLAVE_PRIVADA; va al .env (en local, con COOKIE_SEGURA=false)
+ADMIN_CORREO=... ADMIN_CONTRASENA=... pnpm auth:crear-admin
+COGNITO_COMPRADORES_POOL_ID=... pnpm auth:conciliar-correos  # vista previa, una sola migración
+COGNITO_COMPRADORES_POOL_ID=... pnpm auth:conciliar-correos --aplicar
+SMTP_URL=smtp://localhost:1026 pnpm auth:invitar-migrados
+COGNITO_ADMIN_POOL_ID=... pnpm auth:migrar-admin  # vista previa
+COGNITO_ADMIN_POOL_ID=... SMTP_URL=smtp://localhost:1026 pnpm auth:migrar-admin --aplicar
+
+# Si una invitación venció y la cuenta aún no tiene contraseña:
+SMTP_URL=smtp://localhost:1026 pnpm auth:invitar-migrados --reenviar
+COGNITO_ADMIN_POOL_ID=... SMTP_URL=smtp://localhost:1026 pnpm auth:migrar-admin --aplicar --reenviar
 pnpm probar:cuentas
 ```
-
-Sin `JWT_LLAVE_PRIVADA`, `/auth/*` responde 503 y todo sigue como antes.
 
 | | JWT de acceso | Token de renovación |
 |---|---|---|
@@ -111,8 +151,7 @@ pnpm probar:registro
 - Restablecer **cierra todas las sesiones** abiertas, abre una nueva, da el
   correo por verificado, quita el bloqueo por intentos y manda un aviso de
   "tu contraseña cambió".
-- Es también como crea su **primera** contraseña quien viene de Cognito o
-  entraba sólo con Google.
+- Es también como crea su **primera** contraseña un taller invitado.
 - Contesta igual haya cuenta o no, y el tope de envíos se cuenta también para
   los correos sin cuenta: un 429 no delata nada.
 
@@ -120,8 +159,11 @@ pnpm probar:registro
 pnpm probar:restablecer
 ```
 
-Falta: Google, invitación de talleres, traer los 7 usuarios de Cognito, y
-las pantallas del front (entre ellas `/restablecer`, que todavía no existe).
+El acceso con Google no forma parte del sistema propio actual. Las personas
+que entraban sólo con Google crean una contraseña con el enlace de invitación.
+En producción hay que configurar `SMTP_URL` con un proveedor real antes de
+invitar cuentas o habilitar el registro y la recuperación: sin él la API
+funciona pero no puede entregar códigos ni enlaces.
 
 ## Traer los datos de DynamoDB
 
@@ -142,7 +184,7 @@ y código de evento. Existían porque en DynamoDB no hay `UNIQUE`; aquí son
 src/
 ├── config/     el entorno, validado al arrancar (falla ahí, no en la 1ª petición)
 ├── db/         Drizzle: el esquema y el migrador
-├── auth/       los guards de Cognito, uno por pool
+├── auth/       los guards propios, uno por tipo de cuenta
 ├── almacen/    S3
 ├── colas/      BullMQ
 ├── correo/     SMTP
@@ -151,12 +193,10 @@ src/
 └── workers/    el proceso de los workers (misma imagen, otro comando)
 ```
 
-### Tres pools de Cognito, no uno
+### Tres tipos de sesión
 
-`GuardComprador`, `GuardTaller` y `GuardAdmin`. El guard valida **emisor y
-audiencia**, no grupos: con un solo pool y grupos dentro, un token de taller
-abriría `/cuenta/*` y la única defensa sería una comprobación que alguien puede
-olvidar en una ruta nueva. Así, un token del pool equivocado ni pasa la firma.
+`GuardComprador`, `GuardTaller` y `GuardAdmin` leen cookies distintas y exigen
+audiencias distintas; una sesión de taller no abre `/cuenta/*`.
 
 ### Dos imágenes, no una
 
@@ -251,17 +291,14 @@ movió el pedido.
 
 ## El backoffice
 
-Todo cuelga de `/admin/` y detrás del pool de **admins**, que es un tercer pool
-de Cognito distinto al de compradores y al de talleres. Antes iba detrás de una
-llave compartida guardada por un route handler de Next; se quitó al publicar el
-backoffice, porque una página estática no puede guardar un secreto.
+Todo cuelga de `/admin/` y detrás de la sesión propia de **admin**.
 
 - **Plantillas de prenda** — lo que el editor necesita para montar el lienzo.
   La validación vive en el modelo y no sólo en el asistente: un lado sin mockup
   o sin área imprimible rompe el lienzo en silencio, y **un cilindro tiene un
   solo lado** porque la envoltura ES el objeto.
 - **Categorías**, **revisión de productos** (la única transición que el admin
-  puede hacer y el taller no es publicar), **alta de talleres** y **paquetes**.
+  puede hacer y el taller no es publicar) y **alta de talleres** por invitación.
 - **Subidas a S3**: el archivo nunca pasa por la API, va del navegador a una
   URL firmada. Lo que se guarda es una **ruta relativa**, nunca la de S3.
 
@@ -274,7 +311,7 @@ devolverlo en base64 dentro de la respuesta de API Gateway.
 
 ### Credenciales de AWS
 
-S3 y Cognito se quedan, así que la API necesita credenciales de verdad. En
+S3 se queda, así que la API necesita credenciales de verdad. En
 local, el compose monta `~/.aws` de sólo lectura dentro del contenedor y
 `AWS_PROFILE` dice cuál usar. **En un servidor eso se borra** y las da el rol
 de la máquina.
@@ -398,7 +435,7 @@ hoy un bordado revisado de uno que nadie miró.
 ```bash
 pnpm probar:pedidos    # el ciclo del pedido: transiciones, cancelación, carreras
 pnpm probar:envios     # limitador, cotización guardada, webhook, carrito, cuenta
-pnpm probar:admin      # plantillas, categorías, revisión, paquetes y subidas
+pnpm probar:admin      # plantillas, categorías, revisión y subidas
 pnpm probar:taller     # productos, existencias, perfil y el canal en vivo
 pnpm probar:plantillas # la receta, el arte propio y la vuelta al carrito
 pnpm probar:bordado    # el interruptor, el contrato, la idempotencia y la toma
@@ -409,7 +446,7 @@ diminuto, comprueba que la copia al carrito llegó y borra lo que subió. Es la
 única forma de verificar la copia de servidor a servidor.
 
 Corren contra la base de `docker compose` y por el código real, no por HTTP:
-así se prueba la lógica sin tener que conseguir un token de Cognito.
+así se prueba la lógica sin tener que abrir una sesión HTTP.
 
 ## Lo que todavía no está
 

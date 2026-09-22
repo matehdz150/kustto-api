@@ -8,7 +8,7 @@ import {
 import type { Queue } from "bullmq";
 import { and, eq } from "drizzle-orm";
 import { AlmacenService } from "../almacen/almacen.service";
-import type { Identidad } from "../auth/cognito";
+import type { Identidad } from "../auth/identidad";
 import { COLAS } from "../colas/colas";
 import { COLA } from "../colas/colas.module";
 import { ENTORNO } from "../config/config.module";

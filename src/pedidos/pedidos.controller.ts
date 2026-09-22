@@ -15,7 +15,7 @@ import {
 	GuardTaller,
 	type PeticionConIdentidad,
 } from "../auth/auth.guard";
-import type { Identidad } from "../auth/cognito";
+import type { Identidad } from "../auth/identidad";
 import { PedidosService } from "./pedidos.service";
 import { PedidosCompradorService } from "./pedidos-comprador.service";
 import { PedidosTallerService } from "./pedidos-taller.service";

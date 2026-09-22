@@ -15,7 +15,7 @@ const TIPOS = new Map([
  * podría pedir `carpeta: "mockups/tshirt"` y sobrescribir el mockup de una
  * plantilla en uso.
  */
-const CARPETAS = new Set(["categorias", "paquetes", "productos"]);
+const CARPETAS = new Set(["categorias", "productos"]);
 
 /** Todo lo que llega del navegador y acaba en una llave de S3 pasa por aquí. */
 const limpio = (s: unknown) =>

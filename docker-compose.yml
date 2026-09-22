@@ -2,10 +2,8 @@
 #
 #   docker compose up
 #
-# Lo que NO está aquí, a propósito: S3 y Cognito. Son las dos piezas de AWS que
-# se quedan, y emularlas en local (localstack, un pool falso) daría un sistema
-# que funciona en la máquina de uno y se rompe en el primer despliegue por una
-# diferencia de la emulación. Se habla con los de verdad.
+# Lo que NO está aquí, a propósito: S3. El bucket real sigue cerrado y se usa
+# con credenciales reales; emularlo no probaría permisos ni firmas reales.
 
 name: kustto
 
@@ -44,6 +42,16 @@ services:
       timeout: 3s
       retries: 10
 
+  # Bandeja local: captura códigos e invitaciones sin enviar correos reales.
+  mailpit:
+    image: axllent/mailpit:v1.27
+    environment:
+      MP_DATABASE: /data/mailpit.db
+    ports:
+      - "127.0.0.1:${PUERTO_MAILPIT:-8026}:8025"
+      - "127.0.0.1:${PUERTO_SMTP:-1026}:1025"
+    volumes: ["datos-mailpit:/data"]
+
   migraciones:
     build: .
     command: ["node", "dist/db/migrar.js"]
@@ -61,12 +69,12 @@ services:
     environment:
       DATABASE_URL: postgres://kustto:kustto@postgres:5432/kustto
       REDIS_URL: redis://redis:6379
+      SMTP_URL: ${SMTP_URL:-smtp://mailpit:1025}
     ports: ["${PUERTO_API:-8001}:8000"]
     volumes:
       # El `~/.aws` del host, sólo lectura.
       #
-      # S3 y Cognito son las dos piezas que se quedan, así que la API necesita
-      # credenciales de verdad: no hay forma honesta de emularlas. En un
+	  # S3 se queda, así que la API necesita credenciales de verdad. En un
       # servidor esto se borra y las da el rol de la máquina.
       - ${HOME}/.aws:/home/node/.aws:ro
     depends_on:
@@ -91,6 +99,7 @@ services:
     environment:
       DATABASE_URL: postgres://kustto:kustto@postgres:5432/kustto
       REDIS_URL: redis://redis:6379
+      SMTP_URL: ${SMTP_URL:-smtp://mailpit:1025}
     depends_on:
       postgres: { condition: service_healthy }
       redis: { condition: service_healthy }
@@ -127,3 +136,4 @@ services:
 volumes:
   datos-postgres:
   datos-redis:
+  datos-mailpit:

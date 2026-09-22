@@ -10,7 +10,7 @@ import {
 	UseGuards,
 } from "@nestjs/common";
 import { GuardComprador, type PeticionConIdentidad } from "../auth/auth.guard";
-import type { Identidad } from "../auth/cognito";
+import type { Identidad } from "../auth/identidad";
 import { CarritoService } from "./carrito.service";
 import { DisenosService } from "./disenos.service";
 import { FavoritosService } from "./favoritos.service";

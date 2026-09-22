@@ -53,33 +53,15 @@ const esquema = z.object({
 	/** El origen del front, para CORS. Varios, separados por coma. */
 	ORIGENES: z.string().default("http://localhost:3000"),
 
-	/* ─── Cognito ─────────────────────────────────────────────────────────
-	   Se queda tal cual: es de las dos piezas de AWS que sobreviven. Son TRES
-	   pools distintos a propósito —compradores, talleres, admins— porque el
-	   guard valida emisor y audiencia, y con uno solo un token de taller
-	   abriría /cuenta/*. */
-	COGNITO_REGION: z.string().default("us-east-1"),
-	COGNITO_POOL_COMPRADORES: z.string(),
-	COGNITO_CLIENTE_COMPRADORES: z.string(),
-	COGNITO_POOL_TALLERES: z.string(),
-	COGNITO_CLIENTE_TALLERES: z.string(),
-	COGNITO_POOL_ADMINS: z.string(),
-	COGNITO_CLIENTE_ADMINS: z.string(),
-
 	/* ─── Cuentas propias ─────────────────────────────────────────────────
-	   Lo que reemplaza a Cognito: JWT de acceso de 15 minutos y token de
-	   renovación, los dos en cookies `httpOnly`.
-
-	   OPCIONAL MIENTRAS DURA LA MUDANZA. Sin llave, `/auth/*` responde 503 y
-	   los guards siguen aceptando sólo el token de Cognito: la API arranca
-	   igual que antes. Cuando el front deje Cognito, pasa a obligatoria. */
+	   JWT de acceso de 15 minutos y renovación, ambos en cookies `httpOnly`. */
 
 	/**
 	 * La llave PRIVADA Ed25519, como JWK en una línea y con su `kid`.
 	 * `pnpm auth:llave` genera una. Es un secreto: va en el gestor de secretos
 	 * del servidor, nunca en el repo.
 	 */
-	JWT_LLAVE_PRIVADA: opcional(z.string()),
+	JWT_LLAVE_PRIVADA: z.string().min(1),
 	/**
 	 * La PÚBLICA de la llave anterior, con su `kid`, para rotar sin sacar a
 	 * nadie: los JWT firmados con ella siguen valiendo los 15 minutos que les
@@ -132,6 +114,8 @@ const esquema = z.object({
 	   avisa en el log — la API tiene que servir igual. */
 	SMTP_URL: opcional(z.string().url()),
 	CORREO_DESDE: z.string().default("Kustto <hola@kustto.com.mx>"),
+	/** Buzón interno al que llegan las solicitudes de nuevos talleres. */
+	CORREO_SOLICITUDES: z.string().email().default("hola@kustto.com.mx"),
 
 	/* ─── Paquetería ────────────────────────────────────────────────────── */
 	SKYDROPX_HOST: z.string().url().default("https://sb-pro.skydropx.com"),

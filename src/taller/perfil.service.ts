@@ -7,7 +7,7 @@ import {
 } from "@nestjs/common";
 import { asc, eq } from "drizzle-orm";
 import { AlmacenService } from "../almacen/almacen.service";
-import type { Identidad } from "../auth/cognito";
+import type { Identidad } from "../auth/identidad";
 import { DB, type Db } from "../db/db.module";
 import * as e from "../db/esquema";
 
@@ -30,8 +30,7 @@ export class TallerService {
 	/**
 	 * Su perfil.
 	 *
-	 * Si el taller existe en Cognito pero no en la base es que el alta se quedó
-	 * a medias, y decirlo así es mejor que devolver un esqueleto vacío: aquí,
+	 * Si la cuenta existe pero no el taller, el alta se quedó a medias. Aquí,
 	 * al revés que con el comprador, la fila la crea el admin y su ausencia es
 	 * un problema, no un estado normal.
 	 */
@@ -56,7 +55,7 @@ export class TallerService {
 	 *
 	 * LISTA BLANCA: el taller no puede cambiarse el id, el correo ni el slug
 	 * desde aquí. Sin esto, un PATCH podría reescribir su identidad — y el
-	 * correo es lo que lo ata a su usuario de Cognito.
+	 * correo es parte de su identidad local.
 	 */
 	async actualizar(quien: Identidad, cuerpo: Record<string, any>) {
 		await this.yo(quien);

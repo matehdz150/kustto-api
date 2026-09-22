@@ -57,7 +57,7 @@ export class SesionesService {
 		private readonly jwt: JwtService,
 	) {}
 
-	/** Abre una sesión nueva: después de entrar, con contraseña o con Google. */
+	/** Abre una sesión nueva después de entrar o restablecer la contraseña. */
 	async iniciar(usuario: Usuario, meta: Meta): Promise<Emitidos> {
 		const d = DURACIONES[usuario.tipo];
 		const ahora = Date.now();

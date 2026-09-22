@@ -197,6 +197,12 @@ export class RestablecerService {
 		};
 	}
 
+	/** Envía el enlace con el que una cuenta invitada crea su primera clave. */
+	async invitar(usuario: Usuario) {
+		await this.topes.envio("restablecer", usuario.id);
+		await this.emitirEnlace(usuario);
+	}
+
 	/* ─── Lo que sostiene todo lo de arriba ───────────────────────────────── */
 
 	/**

@@ -172,6 +172,10 @@ export const pedidoPartidas = pgTable(
 		productoId: uuid("producto_id").references(() => productos.id, {
 			onDelete: "set null",
 		}),
+		/** Origen comercial congelado; no se borra si cambia o se archiva el paquete. */
+		paqueteId: uuid("paquete_id"),
+		paqueteNombre: text("paquete_nombre"),
+		paqueteGrupo: uuid("paquete_grupo"),
 		/** Congelado: el nombre que tenía el día que se compró. */
 		nombre: text().notNull(),
 		/** Para comprar el blanco hace falta el código del taller, no el nombre. */

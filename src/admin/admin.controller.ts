@@ -1,3 +1,4 @@
+import { pipeline } from "node:stream";
 import {
 	Body,
 	Controller,
@@ -16,7 +17,6 @@ import type { Response } from "express";
 import { AlmacenService } from "../almacen/almacen.service";
 import { GuardAdmin } from "../auth/auth.guard";
 import { CategoriasService } from "./categorias.service";
-import { PaquetesService } from "./paquetes.service";
 import { PlantillasService } from "./plantillas.service";
 import { RevisionService } from "./revision.service";
 import { SubidasService } from "./subidas.service";
@@ -44,7 +44,6 @@ export class AdminController {
 		private readonly revision: RevisionService,
 		private readonly talleres: TalleresService,
 		private readonly subidas: SubidasService,
-		private readonly paquetes: PaquetesService,
 	) {}
 
 	/* ─── Plantillas de prenda ────────────────────────────────────────────
@@ -148,36 +147,6 @@ export class AdminController {
 	firmarImagen(@Body() c: Record<string, unknown>) {
 		return this.subidas.urlParaImagen(c);
 	}
-
-	/* ─── Paquetes ────────────────────────────────────────────────────────── */
-
-	@Get("paquetes")
-	listarPaquetes() {
-		return this.paquetes.listar();
-	}
-
-	@Get("paquetes/:id")
-	verPaquete(@Param("id", ParseUUIDPipe) id: string) {
-		return this.paquetes.obtener(id);
-	}
-
-	@Post("paquetes")
-	crearPaquete(@Body() c: Record<string, unknown>) {
-		return this.paquetes.crear(c);
-	}
-
-	@Patch("paquetes/:id")
-	actualizarPaquete(
-		@Param("id", ParseUUIDPipe) id: string,
-		@Body() c: Record<string, unknown>,
-	) {
-		return this.paquetes.actualizar(id, c);
-	}
-
-	@Delete("paquetes/:id")
-	borrarPaquete(@Param("id", ParseUUIDPipe) id: string) {
-		return this.paquetes.borrar(id);
-	}
 }
 
 /**
@@ -245,6 +214,13 @@ export class ArchivosController {
 		   inmutables, así que se pueden cachear para siempre. */
 		res.setHeader("cache-control", "public, max-age=31536000, immutable");
 
-		archivo.cuerpo.pipe(res);
+		/* `pipeline` Y NO `.pipe()`. Con `.pipe()`, si el navegador corta la
+		   descarga —cerrar la pestaña, cambiar de página mientras carga una foto—
+		   el cuerpo de S3 se queda abierto y pausado, ocupando una conexión del
+		   pool del SDK. Unas decenas de esas y el pool se agota: TODA lectura de
+		   S3 se cuelga hasta reiniciar la API. `pipeline` destruye los dos
+		   extremos cuando uno falla o se cierra, y la conexión vuelve al pool.
+		   Se reprodujo con 60 descargas cortadas a propósito. */
+		pipeline(archivo.cuerpo, res, () => {});
 	}
 }

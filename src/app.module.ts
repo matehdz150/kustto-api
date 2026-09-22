@@ -14,6 +14,7 @@ import { DbModule } from "./db/db.module";
 import { EnviosModule } from "./envios/envios.module";
 import { EventosModule } from "./eventos/eventos.module";
 import { PedidosModule } from "./pedidos/pedidos.module";
+import { PaquetesModule } from "./paquetes/paquetes.module";
 import { SaludModule } from "./salud/salud.module";
 import { SubidasModule } from "./subidas/subidas.module";
 import { TallerModule } from "./taller/taller.module";
@@ -32,6 +33,7 @@ import { VivoModule } from "./vivo/vivo.module";
 		EnviosModule,
 		SaludModule,
 		CatalogoModule,
+		PaquetesModule,
 		PedidosModule,
 		CuentaModule,
 		SubidasModule,

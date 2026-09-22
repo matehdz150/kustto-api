@@ -9,7 +9,6 @@ import {
 	Post,
 	Req,
 	Res,
-	ServiceUnavailableException,
 	UnauthorizedException,
 } from "@nestjs/common";
 import type { Request, Response } from "express";
@@ -232,11 +231,6 @@ export class CuentasController {
 	/** El tipo de la URL, validado, y la llave configurada. */
 	private async tipoActivo(tipo: string): Promise<TipoDeUsuario> {
 		if (!esTipo(tipo)) throw new NotFoundException();
-		if (!(await this.jwt.activo())) {
-			throw new ServiceUnavailableException(
-				"Las cuentas propias todavía no están encendidas",
-			);
-		}
 		return tipo;
 	}
 }

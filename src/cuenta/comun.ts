@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { BadRequestException, ForbiddenException } from "@nestjs/common";
-import type { Identidad } from "../auth/cognito";
+import type { Identidad } from "../auth/identidad";
 
 export const CP = /^\d{5}$/;
 export const texto = (v: unknown) => String(v ?? "").trim();

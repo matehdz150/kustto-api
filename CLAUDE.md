@@ -17,7 +17,7 @@ datos, y entonces un fallo no dice de cuál de los dos lados viene.
 Explican **por qué**, nunca qué. Los que valen la pena son los que evitan que
 alguien "arregle" algo a propósito:
 
-- por qué son tres pools de Cognito y no uno con grupos,
+- por qué son tres cookies y audiencias de sesión separadas,
 - por qué las fotos de prenda llevan `esquinas` O `banda` y no siempre lo mismo,
 - por qué un recargo de lado en `null` no es lo mismo que uno en cero.
 

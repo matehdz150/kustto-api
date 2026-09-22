@@ -1,6 +1,6 @@
 import { BadRequestException, Inject, Injectable } from "@nestjs/common";
 import { and, eq, inArray, notInArray } from "drizzle-orm";
-import type { Identidad } from "../auth/cognito";
+import type { Identidad } from "../auth/identidad";
 import { DB, type Db } from "../db/db.module";
 import * as e from "../db/esquema";
 import { PerfilService } from "./perfil.service";

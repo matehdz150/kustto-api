@@ -7,7 +7,6 @@
 import { NestFactory } from "@nestjs/core";
 import { eq } from "drizzle-orm";
 import { CategoriasService } from "../src/admin/categorias.service";
-import { PaquetesService } from "../src/admin/paquetes.service";
 import { PlantillasService } from "../src/admin/plantillas.service";
 import { RevisionService } from "../src/admin/revision.service";
 import { SubidasService } from "../src/admin/subidas.service";
@@ -47,7 +46,6 @@ async function principal() {
 	const plantillas = app.get(PlantillasService);
 	const categorias = app.get(CategoriasService);
 	const revision = app.get(RevisionService);
-	const paquetes = app.get(PaquetesService);
 	const subidas = app.get(SubidasService);
 
 	const sufijo = Date.now().toString(36);
@@ -266,74 +264,8 @@ async function principal() {
 		aprobado.estado === "activo" && aprobado.notaRevision === null,
 	);
 
-	/* ─── 4. Paquetes ─────────────────────────────────────────────────── */
-	console.log("\n4. Paquetes");
-
-	const paquete = await paquetes.crear({
-		name: `Kit de bienvenida ${sufijo}`,
-		description: "Playera y termo",
-		status: "draft",
-		items: [
-			{ productId: producto.id, quantity: 2, designRequired: true },
-			{ productId: enUso.id, quantity: 1, designRequired: false },
-		],
-		pricing: { basePrice: 1299.5, discountPercentage: 10 },
-	});
-
-	comprobar(
-		"se crea con sus piezas",
-		paquete.items.length === 2,
-		`${paquete.items.length}`,
-	);
-	comprobar(
-		"el precio conserva los centavos (en el Nest viejo era entero)",
-		paquete.pricing?.basePrice === 1299.5,
-		`$${paquete.pricing?.basePrice}`,
-	);
-	comprobar(
-		"y el estado sale en inglés",
-		paquete.status === "draft",
-		paquete.status,
-	);
-	comprobar(
-		"las piezas traen el nombre del producto",
-		Boolean(paquete.items[0].product?.name),
-		String(paquete.items[0].product?.name),
-	);
-	comprobar(
-		"y respetan `designRequired`",
-		paquete.items[1].designRequired === false,
-	);
-
-	const actualizado = await paquetes.actualizar(paquete.id, {
-		status: "active",
-		items: [{ productId: producto.id, quantity: 5 }],
-	});
-	comprobar(
-		"guardar reemplaza las piezas, no las acumula",
-		actualizado.items.length === 1 && actualizado.items[0].quantity === 5,
-		`${actualizado.items.length} piezas`,
-	);
-	comprobar(
-		"y lo que no se manda se queda como estaba",
-		actualizado.pricing?.basePrice === 1299.5,
-	);
-
-	await falla(
-		"un estado inventado se rechaza",
-		() => paquetes.actualizar(paquete.id, { status: "publicado" }),
-		"Estado desconocido",
-	);
-
-	await paquetes.borrar(paquete.id);
-	await falla(
-		"borrado ya no se encuentra",
-		() => paquetes.obtener(paquete.id),
-		"no encontrado",
-	);
-
-	/* ─── 5. Subidas ──────────────────────────────────────────────────── */
-	console.log("\n5. Subidas a S3");
+	/* ─── 4. Subidas ──────────────────────────────────────────────────── */
+	console.log("\n4. Subidas a S3");
 
 	const mockup = await subidas.urlParaMockup({
 		contentType: "image/png",

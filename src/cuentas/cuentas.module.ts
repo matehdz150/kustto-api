@@ -24,6 +24,12 @@ import { TopesService } from "./topes.service";
 		RegistroService,
 		RestablecerService,
 	],
-	exports: [JwtService, SesionesService, CuentasService],
+	exports: [
+		JwtService,
+		SesionesService,
+		TopesService,
+		CuentasService,
+		RestablecerService,
+	],
 })
 export class CuentasModule {}

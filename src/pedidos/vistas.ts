@@ -57,6 +57,9 @@ function base(pedido: PedidoCompleto) {
 		lineas: pedido.lineas.map((l) => ({
 			id: l.id,
 			productoId: l.productoId,
+			paqueteId: l.paqueteId,
+			paqueteNombre: l.paqueteNombre,
+			paqueteGrupo: l.paqueteGrupo,
 			producto: l.nombre,
 			sku: l.sku,
 			imagen: l.imagenUrl,

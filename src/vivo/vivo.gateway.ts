@@ -8,7 +8,6 @@ import {
 } from "@nestjs/common";
 import IORedis from "ioredis";
 import { WebSocket, WebSocketServer } from "ws";
-import { verificar } from "../auth/cognito";
 import { REDIS } from "../colas/colas.module";
 import { ENTORNO } from "../config/config.module";
 import type { Entorno } from "../config/entorno";
@@ -109,6 +108,14 @@ export class VivoGateway implements OnModuleInit, OnApplicationShutdown {
 
 	/** Lo llama `main.ts` con el `upgrade` del servidor HTTP. */
 	async enganchar(peticion: IncomingMessage, socket: any, cabeza: Buffer) {
+		const origen = peticion.headers.origin;
+		const permitidos = this.env.ORIGENES.split(",").map((o) => o.trim());
+		if (!origen || !permitidos.includes(origen)) {
+			socket.write("HTTP/1.1 403 Forbidden\r\n\r\n");
+			socket.destroy();
+			return;
+		}
+
 		const tallerId = await this.deQuienEs(peticion);
 
 		if (!tallerId) {
@@ -149,18 +156,12 @@ export class VivoGateway implements OnModuleInit, OnApplicationShutdown {
 	/**
 	 * De quién es la conexión.
 	 *
-	 * EL TOKEN VIAJA EN LA URL porque `new WebSocket(url)` no admite cabeceras.
-	 * Se verifica igual que en cualquier ruta —contra el pool de TALLERES, por
-	 * emisor y audiencia— y el `sub` del token es el taller: fiarse de un id
-	 * que mandara el cliente sería dejar que cualquiera escuchara los pedidos
-	 * de otro.
+	 * La cookie httpOnly viaja en el `upgrade` y se verifica con la audiencia de
+	 * taller. No se acepta un id ni un token en la URL, donde acabaría en logs.
 	 */
 	private async deQuienEs(peticion: IncomingMessage) {
 		try {
-			/* LA COOKIE PRIMERO. Con las cuentas propias la sesión viaja sola en
-			   el `upgrade`, como en cualquier petición del mismo sitio, y el token
-			   deja de ir en la URL —donde acaba en los logs de cualquier proxy—.
-			   El `?token=` de Cognito se queda mientras dura la mudanza. */
+			/* La sesión viaja sola en el `upgrade`, como en cualquier petición. */
 			const cookie = leerCookie(
 				peticion.headers.cookie,
 				cookieDeAcceso("taller"),
@@ -171,21 +172,7 @@ export class VivoGateway implements OnModuleInit, OnApplicationShutdown {
 				return identidad.sub;
 			}
 
-			const url = new URL(peticion.url ?? "", "http://interno");
-			const token = url.searchParams.get("token");
-			if (!token) return null;
-
-			const identidad = await verificar(
-				{
-					nombre: "talleres",
-					region: this.env.COGNITO_REGION,
-					poolId: this.env.COGNITO_POOL_TALLERES,
-					clienteId: this.env.COGNITO_CLIENTE_TALLERES,
-				},
-				token,
-			);
-
-			return identidad.sub;
+			return null;
 		} catch (error) {
 			/* El motivo va al registro, no al cliente: decirle a quien prueba
 			   tokens cuál falló y por qué le ahorra trabajo. */

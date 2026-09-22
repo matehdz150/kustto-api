@@ -11,7 +11,7 @@ import {
 	UseGuards,
 } from "@nestjs/common";
 import { GuardTaller, type PeticionConIdentidad } from "../auth/auth.guard";
-import type { Identidad } from "../auth/cognito";
+import type { Identidad } from "../auth/identidad";
 import { TallerService } from "./perfil.service";
 import { ProductosTallerService } from "./productos.service";
 

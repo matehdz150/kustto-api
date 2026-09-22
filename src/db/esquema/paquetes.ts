@@ -7,91 +7,77 @@ import {
 	pgTable,
 	primaryKey,
 	text,
+	uniqueIndex,
 	uuid,
 } from "drizzle-orm/pg-core";
-import { categorias, productos } from "./catalogo";
+import { productos } from "./catalogo";
 import { marcas } from "./comun";
+import { talleres } from "./talleres";
 
-/** En qué punto está un paquete de su edición. */
+/** El proveedor propone; sólo el admin puede pasar a activo. */
 export const estadoPaquete = pgEnum("estado_paquete", [
 	"borrador",
+	"en_revision",
 	"activo",
+	"rechazado",
 	"archivado",
 ]);
 
-/**
- * Un paquete: varios productos que se venden juntos.
- *
- * "El kit de bienvenida": playera, termo y libreta, con sus cantidades y un
- * precio del conjunto. Lo arma el backoffice, no el taller.
- *
- * NO ES UNA PLANTILLA DE COMPRA. Aquélla la hace un comprador para repetir lo
- * suyo (`plantillas_de_compra`); ésta la hace Kustto y sale en el catálogo.
- * Se parecen por dentro y significan cosas distintas, y por eso no comparten
- * tabla: el día que un paquete tenga precio propio o descuento —ya lo tiene—
- * una tabla común obligaría a explicar por qué la mitad de las columnas están
- * vacías en la mitad de las filas.
- *
- * VIENE DEL NEST VIEJO, no de las Lambdas: los paquetes nunca salieron de
- * Postgres. Es lo único del backoffice que ya vivía aquí.
- */
+/** Taxonomía de paquetes, independiente de las categorías de productos. */
+export const categoriasPaquete = pgTable(
+	"categorias_paquete",
+	{
+		id: uuid().primaryKey().defaultRandom(),
+		nombre: text().notNull(),
+		slug: text().notNull(),
+		descripcion: text(),
+		orden: integer().notNull().default(0),
+		activa: boolean().notNull().default(true),
+		...marcas,
+	},
+	(t) => [uniqueIndex("categorias_paquete_slug_unico").on(t.slug)],
+);
+
+/** Un conjunto de productos de UN taller; no duplica sus precios ni stock. */
 export const paquetes = pgTable(
 	"paquetes",
 	{
 		id: uuid().primaryKey().defaultRandom(),
+		tallerId: text("taller_id")
+			.notNull()
+			.references(() => talleres.id, { onDelete: "restrict" }),
 		nombre: text().notNull(),
 		descripcion: text(),
-		imagenUrl: text("imagen_url"),
+		precioBase: numeric("precio_base", { precision: 12, scale: 2 }).notNull(),
+		descuentoPorcentaje: integer("descuento_porcentaje").notNull().default(0),
+		version: integer().notNull().default(1),
 		estado: estadoPaquete().notNull().default("borrador"),
+		notaRevision: text("nota_revision"),
 		...marcas,
 	},
-	(t) => [index("paquetes_estado").on(t.estado)],
+	(t) => [
+		index("paquetes_taller_estado").on(t.tallerId, t.estado),
+		index("paquetes_estado_actualizado").on(t.estado, t.actualizadoEn),
+	],
 );
 
 export const paqueteProductos = pgTable(
 	"paquete_productos",
 	{
-		id: uuid().primaryKey().defaultRandom(),
 		paqueteId: uuid("paquete_id")
 			.notNull()
 			.references(() => paquetes.id, { onDelete: "cascade" }),
 		productoId: uuid("producto_id")
 			.notNull()
-			.references(() => productos.id, { onDelete: "cascade" }),
+			.references(() => productos.id, { onDelete: "restrict" }),
 		cantidad: integer().notNull().default(1),
-		/**
-		 * Si esta pieza hay que diseñarla o va tal cual.
-		 *
-		 * Un kit puede llevar una libreta sin estampar: obligar a pasar por el
-		 * editor para algo que no se personaliza es pedirle al comprador que
-		 * resuelva un paso vacío.
-		 */
-		requiereDiseno: boolean("requiere_diseno").notNull().default(true),
 		orden: integer().notNull().default(0),
 	},
-	(t) => [index("paquete_productos_paquete").on(t.paqueteId, t.orden)],
+	(t) => [
+		primaryKey({ columns: [t.paqueteId, t.productoId] }),
+		index("paquete_productos_producto").on(t.productoId),
+	],
 );
-
-/**
- * El precio del paquete.
- *
- * `precioBase` es el del CONJUNTO, no la suma de sus piezas: un paquete se
- * vende a un precio y ése es el argumento para comprarlo.
- *
- * NUMERIC y no integer. En el Nest viejo era `integer`, o sea pesos enteros:
- * un kit de $1,299.50 no se podía expresar y se redondeaba sin que nadie lo
- * dijera. Aquí son pesos con centavos, como todo lo demás que se cobra.
- */
-export const paquetePrecios = pgTable("paquete_precios", {
-	paqueteId: uuid("paquete_id")
-		.primaryKey()
-		.references(() => paquetes.id, { onDelete: "cascade" }),
-	precioBase: numeric("precio_base", { precision: 12, scale: 2 })
-		.notNull()
-		.default("0"),
-	/** Un 10 es un 10%. Opcional: la mayoría de los paquetes no lo llevan. */
-	descuentoPorcentaje: integer("descuento_porcentaje"),
-});
 
 export const paqueteCategorias = pgTable(
 	"paquete_categorias",
@@ -101,7 +87,7 @@ export const paqueteCategorias = pgTable(
 			.references(() => paquetes.id, { onDelete: "cascade" }),
 		categoriaId: uuid("categoria_id")
 			.notNull()
-			.references(() => categorias.id, { onDelete: "cascade" }),
+			.references(() => categoriasPaquete.id, { onDelete: "restrict" }),
 	},
 	(t) => [
 		primaryKey({ columns: [t.paqueteId, t.categoriaId] }),

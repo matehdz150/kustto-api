@@ -10,7 +10,13 @@
 		"db:generar": "drizzle-kit generate",
 		"db:migrar": "tsx src/db/migrar.ts",
 		"db:desde-dynamo": "tsx scripts/desde-dynamo.ts",
+		"db:exportar-semilla": "node --env-file=.env --import tsx scripts/exportar-semilla.ts",
+		"db:sembrar": "node --env-file=.env --import tsx scripts/sembrar.ts",
 		"auth:llave": "tsx scripts/generar-llave-jwt.ts",
+		"auth:crear-admin": "tsc -p tsconfig.scripts.json && node --env-file=.env dist-scripts/scripts/crear-admin.js",
+		"auth:invitar-migrados": "tsc -p tsconfig.scripts.json && node --env-file=.env dist-scripts/scripts/invitar-cuentas-migradas.js",
+		"auth:conciliar-correos": "tsc -p tsconfig.scripts.json && node --env-file=.env dist-scripts/scripts/conciliar-correos-cognito.js",
+		"auth:migrar-admin": "tsc -p tsconfig.scripts.json && node --env-file=.env dist-scripts/scripts/migrar-admin-cognito.js",
 		"lint": "biome check .",
 		"format": "biome format . --write",
 		"test": "vitest run",
@@ -23,10 +29,10 @@
 		"probar:registro": "tsc -p tsconfig.scripts.json && node --env-file=.env dist-scripts/scripts/probar-registro.js",
 		"probar:restablecer": "tsc -p tsconfig.scripts.json && node --env-file=.env dist-scripts/scripts/probar-restablecer.js",
 		"probar:eventos": "tsc -p tsconfig.scripts.json && node --env-file=.env dist-scripts/scripts/probar-eventos.js",
-		"probar:bordado": "tsc -p tsconfig.scripts.json && node --env-file=.env dist-scripts/scripts/probar-bordado.js"
+		"probar:bordado": "tsc -p tsconfig.scripts.json && node --env-file=.env dist-scripts/scripts/probar-bordado.js",
+		"probar:paquetes": "node --env-file=.env --import tsx scripts/probar-paquetes.ts"
 	},
 	"dependencies": {
-		"@aws-sdk/client-cognito-identity-provider": "^3.1136.0",
 		"@aws-sdk/client-s3": "^3.716.0",
 		"@aws-sdk/s3-request-presigner": "^3.716.0",
 		"@nestjs/common": "^11.0.1",

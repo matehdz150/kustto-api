@@ -31,6 +31,9 @@ export type TallaPedida = { size: string; piezas: number };
 
 export type Partida = {
 	id: string;
+	paqueteId?: string;
+	paqueteNombre?: string;
+	paqueteGrupo?: string;
 	productoId: string;
 	nombre: string;
 	sku: string | null;

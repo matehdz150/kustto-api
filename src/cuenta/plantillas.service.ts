@@ -7,7 +7,7 @@ import {
 } from "@nestjs/common";
 import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import { AlmacenService } from "../almacen/almacen.service";
-import type { Identidad } from "../auth/cognito";
+import type { Identidad } from "../auth/identidad";
 import { DB, type Db } from "../db/db.module";
 import * as e from "../db/esquema";
 import { copiarArteDePedido } from "../pedidos/arte-al-carrito";

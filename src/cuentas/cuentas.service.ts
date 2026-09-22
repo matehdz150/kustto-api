@@ -110,11 +110,29 @@ export class CuentasService {
 			throw new UnauthorizedException("Tu sesión terminó. Vuelve a entrar.");
 		}
 
+		let nombre: string | null = null;
+		if (tipo === "comprador") {
+			const [perfil] = await this.db
+				.select({ nombre: e.compradores.nombre })
+				.from(e.compradores)
+				.where(eq(e.compradores.id, usuario.id))
+				.limit(1);
+			nombre = perfil?.nombre ?? null;
+		} else if (tipo === "taller") {
+			const [perfil] = await this.db
+				.select({ nombre: e.talleres.nombre })
+				.from(e.talleres)
+				.where(eq(e.talleres.id, usuario.id))
+				.limit(1);
+			nombre = perfil?.nombre ?? null;
+		}
+
 		return {
 			id: usuario.id,
 			tipo: usuario.tipo,
 			correo: usuario.correo,
 			correoVerificado: usuario.correoVerificadoEn !== null,
+			nombre,
 		};
 	}
 

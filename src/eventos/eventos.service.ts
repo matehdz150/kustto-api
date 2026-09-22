@@ -8,7 +8,7 @@ import {
 } from "@nestjs/common";
 import { and, count, desc, eq } from "drizzle-orm";
 import { AlmacenService } from "../almacen/almacen.service";
-import type { Identidad } from "../auth/cognito";
+import type { Identidad } from "../auth/identidad";
 import { correoDe, idOrdenable } from "../cuenta/comun";
 import { PerfilService } from "../cuenta/perfil.service";
 import { DB, type Db } from "../db/db.module";

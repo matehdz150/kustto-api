@@ -1,43 +1,30 @@
 import {
 	type CanActivate,
 	type ExecutionContext,
-	Inject,
 	Injectable,
 	UnauthorizedException,
 } from "@nestjs/common";
 import type { Request } from "express";
-import { ENTORNO } from "../config/config.module";
-import type { Entorno } from "../config/entorno";
 import { JwtService } from "../cuentas/jwt.service";
 import { SesionesService } from "../cuentas/sesiones.service";
 import { cookieDeAcceso, type TipoDeUsuario } from "../cuentas/tipos";
-import { type Identidad, type Pool, verificar } from "./cognito";
+import type { Identidad } from "./identidad";
 
 /** La identidad, colgada de la petición para que la lean los controladores. */
 export type PeticionConIdentidad = Request & { identidad?: Identidad };
 
-/** El pool de Cognito que corresponde a cada tipo de cuenta propia. */
-const POOL_DE: Record<TipoDeUsuario, Pool["nombre"]> = {
-	comprador: "compradores",
-	taller: "talleres",
-	admin: "admins",
-};
-
 /**
- * DOS CAMINOS MIENTRAS DURA LA MUDANZA DE COGNITO.
+ * Sólo acepta la cookie de sesión propia correspondiente al tipo de ruta.
  *
- * 1. La cookie `kustto_acceso_<tipo>` con NUESTRO JWT. Si está, manda ella y
- *    no se mira nada más: un JWT propio caducado es un 401 para que el front
- *    renueve, no una invitación a probar con otro token.
- * 2. Si no hay cookie, el `Authorization: Bearer` de Cognito, como siempre.
- *
- * Cuando el front deje Cognito, el segundo camino se borra y con él `jose`
- * contra los JWKS de AWS. Los servicios no notan la diferencia: los dos
- * caminos dejan el MISMO `Identidad` en la petición.
+ * EL `@Injectable()` DE AQUÍ NO SOBRA aunque lo lleven las tres hijas: Nest
+ * lee los tipos del constructor de ESTA clase, y TypeScript sólo los guarda en
+ * una clase con decorador. Sin él, `jwt` y `sesiones` llegan `undefined` y
+ * toda sesión válida sale como 401. Pasó al quitar `@Inject(ENTORNO)`, que era
+ * lo que los guardaba sin que nadie lo supiera.
  */
+@Injectable()
 abstract class GuardDeSesion implements CanActivate {
 	constructor(
-		@Inject(ENTORNO) protected readonly env: Entorno,
 		private readonly jwt: JwtService,
 		private readonly sesiones: SesionesService,
 	) {}
@@ -50,24 +37,8 @@ abstract class GuardDeSesion implements CanActivate {
 		const tipo = this.tipo();
 
 		const cookie = peticion.cookies?.[cookieDeAcceso(tipo)];
-		if (cookie) {
-			peticion.identidad = await this.dePropia(tipo, cookie);
-			return true;
-		}
-
-		const token = tokenDe(peticion);
-		if (!token) throw new UnauthorizedException("Falta el token");
-
-		try {
-			peticion.identidad = await verificar(this.pool(POOL_DE[tipo]), token);
-		} catch (error) {
-			/* El motivo NO sale al cliente: distinguir "firma inválida" de
-			   "audiencia equivocada" le dice a quien prueba tokens por dónde
-			   seguir. Al log sí va entero. */
-			console.warn(`Token rechazado (${tipo}):`, (error as Error).message);
-			throw new UnauthorizedException("Token inválido");
-		}
-
+		if (!cookie) throw new UnauthorizedException("No has entrado");
+		peticion.identidad = await this.dePropia(tipo, cookie);
 		return true;
 	}
 
@@ -92,39 +63,6 @@ abstract class GuardDeSesion implements CanActivate {
 		const { sid: _sid, ...resto } = identidad;
 		return resto;
 	}
-
-	private pool(nombre: Pool["nombre"]): Pool {
-		const env = this.env;
-
-		const pools: Record<Pool["nombre"], Pool> = {
-			compradores: {
-				nombre: "compradores",
-				region: env.COGNITO_REGION,
-				poolId: env.COGNITO_POOL_COMPRADORES,
-				clienteId: env.COGNITO_CLIENTE_COMPRADORES,
-			},
-			talleres: {
-				nombre: "talleres",
-				region: env.COGNITO_REGION,
-				poolId: env.COGNITO_POOL_TALLERES,
-				clienteId: env.COGNITO_CLIENTE_TALLERES,
-			},
-			admins: {
-				nombre: "admins",
-				region: env.COGNITO_REGION,
-				poolId: env.COGNITO_POOL_ADMINS,
-				clienteId: env.COGNITO_CLIENTE_ADMINS,
-			},
-		};
-
-		return pools[nombre];
-	}
-}
-
-function tokenDe(peticion: Request): string | null {
-	const cabecera = peticion.headers.authorization ?? "";
-	const [tipo, valor] = cabecera.split(" ");
-	return tipo?.toLowerCase() === "bearer" && valor ? valor : null;
 }
 
 /**

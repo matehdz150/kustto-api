@@ -2,7 +2,6 @@ import { createHash, createHmac } from "node:crypto";
 import {
 	Inject,
 	Injectable,
-	Logger,
 	ServiceUnavailableException,
 } from "@nestjs/common";
 import {
@@ -13,7 +12,7 @@ import {
 	type KeyLike,
 	SignJWT,
 } from "jose";
-import type { Identidad } from "../auth/cognito";
+import type { Identidad } from "../auth/identidad";
 import { ENTORNO } from "../config/config.module";
 import type { Entorno } from "../config/entorno";
 import { audienciaDe, DURACIONES, type TipoDeUsuario } from "./tipos";
@@ -40,7 +39,6 @@ type Llave = { kid: string; llave: KeyLike | Uint8Array };
  */
 @Injectable()
 export class JwtService {
-	private readonly log = new Logger(JwtService.name);
 	private actual: Llave | null = null;
 	private readonly publicas = new Map<string, KeyLike | Uint8Array>();
 	private secreto: Buffer | null = null;
@@ -137,12 +135,7 @@ export class JwtService {
 	private async cargar() {
 		const privada = this.env.JWT_LLAVE_PRIVADA;
 
-		if (!privada) {
-			this.log.warn(
-				"Sin JWT_LLAVE_PRIVADA: /auth/* apagado, sólo se acepta Cognito.",
-			);
-			return;
-		}
+		if (!privada) throw new Error("Falta JWT_LLAVE_PRIVADA");
 
 		const jwk = leerJwk(privada, "JWT_LLAVE_PRIVADA");
 		if (!jwk.d) {

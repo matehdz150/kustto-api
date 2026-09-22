@@ -5,7 +5,7 @@
 # regla de la rama `main` (Settings → Rules): un workflow en rojo, por sí solo,
 # no impide darle a "Merge".
 #
-# QUÉ NO CORRE AQUÍ, y por qué: los `probar:*`. Hablan con S3 y Cognito de
+# QUÉ NO CORRE AQUÍ, y por qué: los `probar:*`. Algunos hablan con S3 de
 # verdad —a propósito, ver el README— y eso en CI serían credenciales de
 # producción en un runner. Se corren a mano antes de abrir el PR.
 
