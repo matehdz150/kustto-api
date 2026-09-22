@@ -81,8 +81,29 @@ Sin `JWT_LLAVE_PRIVADA`, `/auth/*` responde 503 y todo sigue como antes.
   en `ORIGENES` se rechaza (`main.ts`).
 - **Topes en Redis**: 5 intentos por correo y 30 por IP cada 15 minutos.
 
-Falta: registro y verificación del correo, "olvidé mi contraseña", Google,
-invitación de talleres, traer los 7 usuarios de Cognito y el front.
+**Alta de compradores** (`/auth/comprador/registrar`, `verificar`, `reenviar`):
+
+- Registrar crea la cuenta sin verificar y manda un código de 6 dígitos que
+  vale 24 h; **el código va en el asunto**, para copiarlo desde la
+  notificación. Verificar con el código bueno **abre la sesión**.
+- Un correo que existe pero sin verificar se puede volver a registrar, y la
+  contraseña nueva reemplaza a la vieja: si no, cualquiera registraría tu
+  correo antes que tú y te dejaría fuera.
+- 5 intentos por código, **gastados antes de comparar**: una ráfaga en
+  paralelo no consigue más de 5.
+- Un código por vez (reenviar mata el anterior), 1 envío por minuto y 5 por
+  hora por cuenta, 10 registros por hora por IP. Los topes se revisan antes
+  de cambiar nada.
+- Los errores traen `codigo` (`ya_existe`, `codigo_invalido`,
+  `codigo_vencido`, `ya_verificado`, `limite`, `contrasena`) para que el front
+  elija su mensaje.
+
+```bash
+pnpm probar:registro
+```
+
+Falta: "olvidé mi contraseña", Google, invitación de talleres, traer los 7
+usuarios de Cognito y el front.
 
 ## Traer los datos de DynamoDB
 

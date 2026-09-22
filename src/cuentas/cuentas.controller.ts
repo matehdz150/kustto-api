@@ -18,6 +18,7 @@ import type { Entorno } from "../config/entorno";
 import { borrarCookies, ponerCookies } from "./cookies";
 import { CuentasService } from "./cuentas.service";
 import { JwtService } from "./jwt.service";
+import { RegistroService } from "./registro.service";
 import { type Meta, SesionesService } from "./sesiones.service";
 import {
 	cookieDeAcceso,
@@ -39,6 +40,7 @@ export class CuentasController {
 		private readonly cuentas: CuentasService,
 		private readonly sesiones: SesionesService,
 		private readonly jwt: JwtService,
+		private readonly registro: RegistroService,
 	) {}
 
 	@Post("entrar")
@@ -127,6 +129,56 @@ export class CuentasController {
 		}
 
 		return this.cuentas.yo(t, identidad.sub);
+	}
+
+	/* ─── Alta de compradores ───────────────────────────────────────────────
+	   Sólo `comprador`: los talleres entran por invitación y el admin se da de
+	   alta a mano. Con otro tipo en la URL, 404 — como si no existieran. */
+
+	/** Crea la cuenta y manda el código. No abre sesión. */
+	@Post("registrar")
+	@HttpCode(200)
+	async registrar(
+		@Param("tipo") tipo: string,
+		@Body() cuerpo: Record<string, unknown>,
+		@Req() req: Request,
+	) {
+		await this.soloComprador(tipo);
+		return this.registro.registrar(cuerpo, metaDe(req));
+	}
+
+	/** El código bueno confirma el correo Y abre la sesión: pone las cookies. */
+	@Post("verificar")
+	@HttpCode(200)
+	async verificar(
+		@Param("tipo") tipo: string,
+		@Body() cuerpo: Record<string, unknown>,
+		@Req() req: Request,
+		@Res({ passthrough: true }) res: Response,
+	) {
+		await this.soloComprador(tipo);
+		const { emitidos, usuario } = await this.registro.verificar(
+			cuerpo,
+			metaDe(req),
+		);
+		ponerCookies(res, this.env, "comprador", emitidos);
+		return this.cuentas.yo("comprador", usuario.id);
+	}
+
+	/** Contesta igual exista la cuenta o no. Ver `RegistroService.reenviar`. */
+	@Post("reenviar")
+	@HttpCode(200)
+	async reenviar(
+		@Param("tipo") tipo: string,
+		@Body() cuerpo: Record<string, unknown>,
+	) {
+		await this.soloComprador(tipo);
+		return this.registro.reenviar(cuerpo);
+	}
+
+	private async soloComprador(tipo: string) {
+		const t = await this.tipoActivo(tipo);
+		if (t !== "comprador") throw new NotFoundException();
 	}
 
 	/** El tipo de la URL, validado, y la llave configurada. */

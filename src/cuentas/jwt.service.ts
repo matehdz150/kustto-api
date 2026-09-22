@@ -1,3 +1,4 @@
+import { createHash, createHmac } from "node:crypto";
 import {
 	Inject,
 	Injectable,
@@ -42,6 +43,7 @@ export class JwtService {
 	private readonly log = new Logger(JwtService.name);
 	private actual: Llave | null = null;
 	private readonly publicas = new Map<string, KeyLike | Uint8Array>();
+	private secreto: Buffer | null = null;
 	private readonly lista: Promise<void>;
 
 	constructor(@Inject(ENTORNO) private readonly env: Entorno) {
@@ -70,6 +72,28 @@ export class JwtService {
 			.setIssuedAt()
 			.setExpirationTime(`${DURACIONES[tipo].acceso}s`)
 			.sign(this.actual.llave);
+	}
+
+	/**
+	 * Una huella con SECRETO del servidor (HMAC-SHA256), para los códigos de
+	 * seis dígitos.
+	 *
+	 * UN SHA256 A SECAS NO BASTA con ellos: son un millón de combinaciones, y
+	 * quien tuviera una copia de la base los sacaría todos en un segundo. Con
+	 * el secreto, la copia sola no sirve.
+	 *
+	 * EL SECRETO SALE DE LA LLAVE DE FIRMA para no sumar otra variable de
+	 * entorno. El precio es que rotar la llave invalida los códigos que estén
+	 * vivos, y eso cuesta un "reenviar código".
+	 */
+	async huellaSecreta(texto: string) {
+		await this.lista;
+		if (!this.secreto) {
+			throw new ServiceUnavailableException(
+				"Las cuentas propias no están configuradas",
+			);
+		}
+		return createHmac("sha256", this.secreto).update(texto).digest("hex");
 	}
 
 	/**
@@ -127,6 +151,11 @@ export class JwtService {
 
 		const kid = jwk.kid as string;
 		this.actual = { kid, llave: await importJWK(jwk, "EdDSA") };
+		/* Derivado y no la llave tal cual: el HMAC y la firma no deben
+		   compartir material directamente. */
+		this.secreto = createHash("sha256")
+			.update(`kustto:huellas:${jwk.d}`)
+			.digest();
 
 		/* La pública sale de la privada quitándole `d`. */
 		const { d: _d, ...publica } = jwk;

@@ -20,6 +20,7 @@
 		"probar:taller": "tsc -p tsconfig.scripts.json && node --env-file=.env dist-scripts/scripts/probar-taller.js",
 		"probar:plantillas": "tsc -p tsconfig.scripts.json && node --env-file=.env dist-scripts/scripts/probar-plantillas.js",
 		"probar:cuentas": "tsc -p tsconfig.scripts.json && node --env-file=.env dist-scripts/scripts/probar-cuentas.js",
+		"probar:registro": "tsc -p tsconfig.scripts.json && node --env-file=.env dist-scripts/scripts/probar-registro.js",
 		"probar:eventos": "tsc -p tsconfig.scripts.json && node --env-file=.env dist-scripts/scripts/probar-eventos.js",
 		"probar:bordado": "tsc -p tsconfig.scripts.json && node --env-file=.env dist-scripts/scripts/probar-bordado.js"
 	},

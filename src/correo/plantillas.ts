@@ -649,3 +649,60 @@ export function pedidoEntregado(datos: {
 		html,
 	};
 }
+
+/* ─── Cuentas: el código para confirmar el correo ───────────────────────── */
+
+/**
+ * El código de seis dígitos del registro.
+ *
+ * EL CÓDIGO VA EN EL ASUNTO. Es lo único que la persona necesita, y con él ahí
+ * lo copia desde la notificación sin abrir el correo —y el teléfono lo ofrece
+ * solo en el teclado—. Los que mandan "Tu código de verificación" y lo
+ * esconden adentro obligan a cambiar de app dos veces.
+ *
+ * Va SEPARADO EN DOS GRUPOS en el HTML (`482 913`) porque seis cifras
+ * seguidas se leen mal; en el texto y en el asunto va pegado, para que copiar
+ * y pegar no arrastre el espacio.
+ */
+export function codigoDeVerificacion(datos: {
+	para: string;
+	nombre: string | null;
+	codigo: string;
+	/** Horas que vale. */
+	vigencia: number;
+}): Correo {
+	const saludo = datos.nombre ? `Hola ${datos.nombre},` : "Hola,";
+	const partido = `${datos.codigo.slice(0, 3)}&nbsp;${datos.codigo.slice(3)}`;
+
+	const texto = [
+		saludo,
+		"",
+		`Tu código para confirmar tu correo en Kustto es: ${datos.codigo}`,
+		"",
+		`Vale ${datos.vigencia} horas. Si no fuiste tú, ignora este correo: sin el código nadie puede usar tu dirección.`,
+	].join("\n");
+
+	const html = envoltorio(
+		"Confirma tu correo",
+		`Tu código es ${datos.codigo}. Vale ${datos.vigencia} horas.`,
+		encabezado(
+			"Tu cuenta",
+			"Confirma tu correo",
+			`${esc(saludo)} escribe este código en la pantalla donde te registraste.`,
+		) +
+			`<tr><td align="center" style="padding:26px 32px 4px;font-family:${FUENTE};">
+<div style="display:inline-block;padding:18px 28px;background:${SUPERFICIE};border-radius:14px;font-size:34px;line-height:40px;font-weight:700;letter-spacing:0.12em;color:${LIMA};">${partido}</div>
+</td></tr>` +
+			nota(
+				`Vale ${datos.vigencia} horas. Si no fuiste tú, ignora este correo: sin el código nadie puede usar tu dirección.`,
+			) +
+			FIN,
+	);
+
+	return {
+		para: datos.para,
+		asunto: `${datos.codigo} es tu código de Kustto`,
+		texto,
+		html,
+	};
+}

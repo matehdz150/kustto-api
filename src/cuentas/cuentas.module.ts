@@ -2,6 +2,7 @@ import { Global, Module } from "@nestjs/common";
 import { CuentasController } from "./cuentas.controller";
 import { CuentasService } from "./cuentas.service";
 import { JwtService } from "./jwt.service";
+import { RegistroService } from "./registro.service";
 import { SesionesService } from "./sesiones.service";
 
 /**
@@ -13,7 +14,7 @@ import { SesionesService } from "./sesiones.service";
 @Global()
 @Module({
 	controllers: [CuentasController],
-	providers: [JwtService, SesionesService, CuentasService],
+	providers: [JwtService, SesionesService, CuentasService, RegistroService],
 	exports: [JwtService, SesionesService, CuentasService],
 })
 export class CuentasModule {}
