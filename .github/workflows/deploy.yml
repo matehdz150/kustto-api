@@ -23,9 +23,29 @@ jobs:
 
       - name: Debug GitHub context
         run: |
-            echo "Repository: $GITHUB_REPOSITORY"
-            echo "Ref: $GITHUB_REF"
-            echo "Ref name: $GITHUB_REF_NAME"
+          echo "Repository: $GITHUB_REPOSITORY"
+          echo "Ref: $GITHUB_REF"
+          echo "Ref name: $GITHUB_REF_NAME"
+
+      - name: Show OIDC claims
+        env:
+          AUDIENCE: sts.amazonaws.com
+        run: |
+          TOKEN_JSON=$(curl -s \
+            -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=$AUDIENCE")
+
+          ID_TOKEN=$(echo "$TOKEN_JSON" | jq -r '.value')
+
+          PAYLOAD=$(echo "$ID_TOKEN" | cut -d '.' -f2)
+
+          PADDING=$(( (4 - ${#PAYLOAD} % 4) % 4 ))
+          PAYLOAD="${PAYLOAD}$(printf '=%.0s' $(seq 1 $PADDING))"
+
+          echo "$PAYLOAD" \
+            | tr '_-' '/+' \
+            | base64 -d \
+            | jq
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
