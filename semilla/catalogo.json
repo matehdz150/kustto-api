@@ -4,9 +4,7 @@
 			"id": "cap",
 			"nombre": "Basic Cap",
 			"datos": {
-				"sides": [
-					"front"
-				],
+				"sides": ["front"],
 				"mockups": {
 					"front": "/mockups/cap/front-9779e7d6782e.png"
 				},
@@ -32,9 +30,7 @@
 			"nombre": "Mochila",
 			"datos": {
 				"forma": "plano",
-				"sides": [
-					"front"
-				],
+				"sides": ["front"],
 				"mockups": {
 					"front": "/mockups/mochila-01/front-8235a97e1f85.png"
 				},
@@ -60,9 +56,7 @@
 			"nombre": "Taza",
 			"datos": {
 				"forma": "cilindro",
-				"sides": [
-					"wrap"
-				],
+				"sides": ["wrap"],
 				"mockups": {
 					"wrap": "/mockups/taza-01/wrap-40b2945b6737.png"
 				},
@@ -88,9 +82,7 @@
 			"nombre": "Termo-01",
 			"datos": {
 				"forma": "cilindro",
-				"sides": [
-					"wrap"
-				],
+				"sides": ["wrap"],
 				"mockups": {
 					"wrap": "/mockups/termo-01/wrap-3ec8f58e324c.png"
 				},
@@ -116,9 +108,7 @@
 			"nombre": "Termo",
 			"datos": {
 				"forma": "cilindro",
-				"sides": [
-					"wrap"
-				],
+				"sides": ["wrap"],
 				"mockups": {
 					"wrap": "/mockups/Termo-02/wrap-5cf0691256c8.png"
 				},
@@ -144,12 +134,7 @@
 			"nombre": "Basic T-Shirt",
 			"datos": {
 				"forma": "plano",
-				"sides": [
-					"front",
-					"back",
-					"rightmanga",
-					"leftmanga"
-				],
+				"sides": ["front", "back", "rightmanga", "leftmanga"],
 				"mockups": {
 					"back": "/mockups/tshirt/back-0eb3ba6c9ad0.png",
 					"front": "/mockups/tshirt/front-8cdcbb1aa538.png",
@@ -271,12 +256,7 @@
 				"allowText": true,
 				"allowImages": true
 			},
-			"lados_de_plantilla": [
-				"front",
-				"back",
-				"leftmanga",
-				"rightmanga"
-			],
+			"lados_de_plantilla": ["front", "back", "leftmanga", "rightmanga"],
 			"nota_revision": null,
 			"imagenes": [
 				{
@@ -499,9 +479,7 @@
 					"orden": 4
 				}
 			],
-			"categorias": [
-				"0310f8bc-b39d-4852-806d-b9fb8e7e0796"
-			]
+			"categorias": ["0310f8bc-b39d-4852-806d-b9fb8e7e0796"]
 		},
 		{
 			"id": "fef3cb1d-5c43-49cf-b5ad-6dfc3209fe9c",
@@ -524,9 +502,7 @@
 				"allowText": true,
 				"allowImages": true
 			},
-			"lados_de_plantilla": [
-				"front"
-			],
+			"lados_de_plantilla": ["front"],
 			"nota_revision": null,
 			"imagenes": [
 				{
@@ -657,9 +633,7 @@
 					"orden": 2
 				}
 			],
-			"categorias": [
-				"881994ff-b0c9-4270-a841-4a856825938a"
-			]
+			"categorias": ["881994ff-b0c9-4270-a841-4a856825938a"]
 		},
 		{
 			"id": "dc4be280-e6a1-4be0-b13d-a2862f05a717",
@@ -682,9 +656,7 @@
 				"allowText": true,
 				"allowImages": true
 			},
-			"lados_de_plantilla": [
-				"wrap"
-			],
+			"lados_de_plantilla": ["wrap"],
 			"nota_revision": null,
 			"imagenes": [
 				{
@@ -785,9 +757,7 @@
 					"orden": 2
 				}
 			],
-			"categorias": [
-				"11826730-743d-4247-beaa-ef4e588b7251"
-			]
+			"categorias": ["11826730-743d-4247-beaa-ef4e588b7251"]
 		},
 		{
 			"id": "0efb089a-914a-433b-a253-d758ed91d472",
@@ -810,9 +780,7 @@
 				"allowText": true,
 				"allowImages": true
 			},
-			"lados_de_plantilla": [
-				"wrap"
-			],
+			"lados_de_plantilla": ["wrap"],
 			"nota_revision": null,
 			"imagenes": [
 				{
@@ -883,9 +851,7 @@
 					"orden": 0
 				}
 			],
-			"categorias": [
-				"4cb6cbbd-6eaa-4dd6-b4ee-286eebc5dc2e"
-			]
+			"categorias": ["4cb6cbbd-6eaa-4dd6-b4ee-286eebc5dc2e"]
 		},
 		{
 			"id": "a031b52d-1b2f-4ba7-9286-983eab4cccfb",
@@ -908,9 +874,7 @@
 				"allowText": true,
 				"allowImages": true
 			},
-			"lados_de_plantilla": [
-				"front"
-			],
+			"lados_de_plantilla": ["front"],
 			"nota_revision": null,
 			"imagenes": [
 				{
@@ -1059,9 +1023,7 @@
 					"orden": 2
 				}
 			],
-			"categorias": [
-				"2710f70c-7435-40e4-a109-e2503488b55d"
-			]
+			"categorias": ["2710f70c-7435-40e4-a109-e2503488b55d"]
 		},
 		{
 			"id": "c6d58549-7a8b-45f4-b15c-0e7a046ababe",
@@ -1084,9 +1046,7 @@
 				"allowText": true,
 				"allowImages": true
 			},
-			"lados_de_plantilla": [
-				"wrap"
-			],
+			"lados_de_plantilla": ["wrap"],
 			"nota_revision": null,
 			"imagenes": [
 				{
@@ -1187,9 +1147,7 @@
 					"orden": 2
 				}
 			],
-			"categorias": [
-				"4cb6cbbd-6eaa-4dd6-b4ee-286eebc5dc2e"
-			]
+			"categorias": ["4cb6cbbd-6eaa-4dd6-b4ee-286eebc5dc2e"]
 		}
 	],
 	"arte": [
@@ -1201,9 +1159,7 @@
 			"plantilla_id": "termo-01",
 			"color": "Blanco",
 			"color_hex": "#FFF",
-			"lados": [
-				"wrap"
-			],
+			"lados": ["wrap"],
 			"arte": [
 				{
 					"dpi": 300,
@@ -1232,9 +1188,7 @@
 			"plantilla_id": "termo-01",
 			"color": "Blanco",
 			"color_hex": "#FFF",
-			"lados": [
-				"wrap"
-			],
+			"lados": ["wrap"],
 			"arte": [
 				{
 					"dpi": 300,
@@ -1263,9 +1217,7 @@
 			"plantilla_id": "cap",
 			"color": "Blanco",
 			"color_hex": "#FFF",
-			"lados": [
-				"front"
-			],
+			"lados": ["front"],
 			"arte": [
 				{
 					"dpi": 300,
@@ -1294,9 +1246,7 @@
 			"plantilla_id": "termo-01",
 			"color": "Blanco",
 			"color_hex": "#FFF",
-			"lados": [
-				"wrap"
-			],
+			"lados": ["wrap"],
 			"arte": [
 				{
 					"dpi": 300,
@@ -1325,9 +1275,7 @@
 			"plantilla_id": "taza-01",
 			"color": "Blanco",
 			"color_hex": "#fff",
-			"lados": [
-				"wrap"
-			],
+			"lados": ["wrap"],
 			"arte": [
 				{
 					"dpi": 300,
@@ -1355,9 +1303,7 @@
 			"plantilla_id": "tshirt",
 			"color": "Blanco",
 			"color_hex": "#FFF",
-			"lados": [
-				"front"
-			],
+			"lados": ["front"],
 			"arte": [
 				{
 					"dpi": 300,
@@ -1385,9 +1331,7 @@
 			"plantilla_id": "tshirt",
 			"color": "Blanco",
 			"color_hex": "#FFF",
-			"lados": [
-				"front"
-			],
+			"lados": ["front"],
 			"arte": [
 				{
 					"dpi": 300,
@@ -1415,9 +1359,7 @@
 			"plantilla_id": "taza-01",
 			"color": "Blanco",
 			"color_hex": "#fff",
-			"lados": [
-				"wrap"
-			],
+			"lados": ["wrap"],
 			"arte": [
 				{
 					"dpi": 300,
@@ -1445,9 +1387,7 @@
 			"plantilla_id": "cap",
 			"color": "Blanco",
 			"color_hex": "#FFF",
-			"lados": [
-				"front"
-			],
+			"lados": ["front"],
 			"arte": [
 				{
 					"dpi": 300,
