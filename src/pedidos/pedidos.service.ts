@@ -16,8 +16,8 @@ import type { Correo } from "../correo/correo.service";
 import { pedidoParaTaller, pedidoRecibido } from "../correo/plantillas";
 import { DB, type Db } from "../db/db.module";
 import * as e from "../db/esquema";
-import { centavosDelPaquete, repartirCentavos } from "../paquetes/precio";
 import { EnviosService } from "../envios/envios.service";
+import { centavosDelPaquete, repartirCentavos } from "../paquetes/precio";
 import {
 	aNumeric,
 	aPesos,
