@@ -106,15 +106,24 @@ export class PedidosService {
 				partida: aPartida(lineas[i], productos[i], pedidoId),
 			}));
 			for (const grupo of paquetes.values()) {
-				const suyas = detalladas.filter((d) => grupo.indices.includes(d.indice));
+				const suyas = detalladas.filter((d) =>
+					grupo.indices.includes(d.indice),
+				);
 				if (!suyas.length) continue;
-				const pesos = suyas.map((d) => productos[d.indice].precioBase * d.partida.piezas);
+				const pesos = suyas.map(
+					(d) => productos[d.indice].precioBase * d.partida.piezas,
+				);
 				const asignados = repartirCentavos(grupo.centavos, pesos);
 				suyas.forEach((d, i) => {
 					const base = asignados[i];
-					const extra = aPesos(d.partida.importe - productos[d.indice].precioBase * d.partida.piezas);
+					const extra = aPesos(
+						d.partida.importe -
+							productos[d.indice].precioBase * d.partida.piezas,
+					);
 					d.partida.importe = aPesos(base / 100 + extra);
-					d.partida.precioUnitario = aPesos(d.partida.importe / d.partida.piezas);
+					d.partida.precioUnitario = aPesos(
+						d.partida.importe / d.partida.piezas,
+					);
 					d.partida.paqueteId = grupo.id;
 					d.partida.paqueteNombre = grupo.nombre;
 					d.partida.paqueteGrupo = grupo.grupo;
@@ -214,55 +223,135 @@ export class PedidosService {
 	}
 
 	/** La identidad y el precio de cada paquete se leen aquí, nunca del navegador. */
-	private async validarPaquetes(lineas: Record<string, any>[], productos: ProductoParaPedir[]) {
+	private async validarPaquetes(
+		lineas: Record<string, any>[],
+		productos: ProductoParaPedir[],
+	) {
 		const grupos = new Map<string, { id: string; indices: number[] }>();
-		const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+		const uuid =
+			/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 		lineas.forEach((l, i) => {
 			const id = l?.paqueteId;
 			const grupo = l?.paqueteGrupo;
 			if (!id && !grupo) return;
-			if (!uuid.test(String(id)) || !uuid.test(String(grupo))) throw new BadRequestException("Identificador de paquete inválido");
+			if (!uuid.test(String(id)) || !uuid.test(String(grupo)))
+				throw new BadRequestException("Identificador de paquete inválido");
 			const anterior = grupos.get(grupo);
-			if (anterior && anterior.id !== id) throw new BadRequestException("Un grupo no puede mezclar paquetes");
+			if (anterior && anterior.id !== id)
+				throw new BadRequestException("Un grupo no puede mezclar paquetes");
 			grupos.set(grupo, { id, indices: [...(anterior?.indices ?? []), i] });
 		});
-		const resultado = new Map<string, { id: string; grupo: string; nombre: string; centavos: number; indices: number[] }>();
+		const resultado = new Map<
+			string,
+			{
+				id: string;
+				grupo: string;
+				nombre: string;
+				centavos: number;
+				indices: number[];
+			}
+		>();
 		if (!grupos.size) return resultado;
 		const ids = [...new Set([...grupos.values()].map((g) => g.id))];
 		const [paquetes, componentes, categorias] = await Promise.all([
 			this.db.select().from(e.paquetes).where(inArray(e.paquetes.id, ids)),
-			this.db.select().from(e.paqueteProductos).where(inArray(e.paqueteProductos.paqueteId, ids)),
-			this.db.select({ paqueteId: e.paqueteCategorias.paqueteId, activa: e.categoriasPaquete.activa })
-				.from(e.paqueteCategorias).innerJoin(e.categoriasPaquete, eq(e.paqueteCategorias.categoriaId, e.categoriasPaquete.id))
+			this.db
+				.select()
+				.from(e.paqueteProductos)
+				.where(inArray(e.paqueteProductos.paqueteId, ids)),
+			this.db
+				.select({
+					paqueteId: e.paqueteCategorias.paqueteId,
+					activa: e.categoriasPaquete.activa,
+				})
+				.from(e.paqueteCategorias)
+				.innerJoin(
+					e.categoriasPaquete,
+					eq(e.paqueteCategorias.categoriaId, e.categoriasPaquete.id),
+				)
 				.where(inArray(e.paqueteCategorias.paqueteId, ids)),
 		]);
 		for (const [grupo, dato] of grupos) {
 			const paquete = paquetes.find((p) => p.id === dato.id);
-			if (!paquete || paquete.estado !== "activo") throw new ConflictException("El paquete ya no está publicado");
-			if (!categorias.some((c) => c.paqueteId === dato.id && c.activa)) throw new ConflictException("La categoría del paquete ya no está disponible");
+			if (!paquete || paquete.estado !== "activo")
+				throw new ConflictException("El paquete ya no está publicado");
+			if (!categorias.some((c) => c.paqueteId === dato.id && c.activa))
+				throw new ConflictException(
+					"La categoría del paquete ya no está disponible",
+				);
 			const suyos = componentes.filter((p) => p.paqueteId === dato.id);
-			if (!suyos.length || suyos.length !== dato.indices.length) throw new BadRequestException("El paquete debe comprarse completo");
+			if (!suyos.length || suyos.length !== dato.indices.length)
+				throw new BadRequestException("El paquete debe comprarse completo");
 			const usados = new Set<string>();
 			let cantidad: number | null = null;
 			for (const i of dato.indices) {
 				const producto = productos[i];
 				const componente = suyos.find((p) => p.productoId === producto.id);
-				if (!componente || usados.has(producto.id) || producto.tallerId !== paquete.tallerId) throw new BadRequestException("Los productos no corresponden al paquete");
+				if (
+					!componente ||
+					usados.has(producto.id) ||
+					producto.tallerId !== paquete.tallerId
+				)
+					throw new BadRequestException(
+						"Los productos no corresponden al paquete",
+					);
 				usados.add(producto.id);
 				const tallas = Array.isArray(lineas[i].tallas) ? lineas[i].tallas : [];
-				if (!tallas.length || tallas.some((t: any) => !String(t?.size ?? "").trim() || !Number.isInteger(Number(t?.piezas)) || Number(t.piezas) < 1)) throw new BadRequestException("Tallas inválidas en el paquete");
-				const piezas = tallas.reduce((s: number, t: any) => s + Number(t?.piezas ?? 0), 0);
+				if (
+					!tallas.length ||
+					tallas.some(
+						(t: any) =>
+							!String(t?.size ?? "").trim() ||
+							!Number.isInteger(Number(t?.piezas)) ||
+							Number(t.piezas) < 1,
+					)
+				)
+					throw new BadRequestException("Tallas inválidas en el paquete");
+				const piezas = tallas.reduce(
+					(s: number, t: any) => s + Number(t?.piezas ?? 0),
+					0,
+				);
 				const veces = piezas / componente.cantidad;
-				if (!Number.isInteger(veces) || veces < 1 || veces > 100 || (cantidad !== null && cantidad !== veces)) throw new BadRequestException("Las cantidades del paquete no coinciden");
+				if (
+					!Number.isInteger(veces) ||
+					veces < 1 ||
+					veces > 100 ||
+					(cantidad !== null && cantidad !== veces)
+				)
+					throw new BadRequestException(
+						"Las cantidades del paquete no coinciden",
+					);
 				cantidad = veces;
 			}
-			if (cantidad === null) throw new BadRequestException("El paquete está vacío");
-			const vigente = centavosDelPaquete(Number(paquete.precioBase), paquete.descuentoPorcentaje);
-			if (dato.indices.some((i) => !Number.isFinite(Number(lineas[i].paquetePrecioVisto)) || Math.round(Number(lineas[i].paquetePrecioVisto) * 100) !== vigente)) {
-				throw new ConflictException("El precio del paquete cambió. Quítalo del carrito y agrégalo de nuevo para confirmar el importe actual");
+			if (cantidad === null)
+				throw new BadRequestException("El paquete está vacío");
+			const vigente = centavosDelPaquete(
+				Number(paquete.precioBase),
+				paquete.descuentoPorcentaje,
+			);
+			if (
+				dato.indices.some(
+					(i) =>
+						!Number.isFinite(Number(lineas[i].paquetePrecioVisto)) ||
+						Math.round(Number(lineas[i].paquetePrecioVisto) * 100) !== vigente,
+				)
+			) {
+				throw new ConflictException(
+					"El precio del paquete cambió. Quítalo del carrito y agrégalo de nuevo para confirmar el importe actual",
+				);
 			}
-			const centavos = centavosDelPaquete(Number(paquete.precioBase), paquete.descuentoPorcentaje, cantidad);
-			resultado.set(grupo, { id: dato.id, grupo, nombre: paquete.nombre, centavos, indices: dato.indices });
+			const centavos = centavosDelPaquete(
+				Number(paquete.precioBase),
+				paquete.descuentoPorcentaje,
+				cantidad,
+			);
+			resultado.set(grupo, {
+				id: dato.id,
+				grupo,
+				nombre: paquete.nombre,
+				centavos,
+				indices: dato.indices,
+			});
 		}
 		return resultado;
 	}
