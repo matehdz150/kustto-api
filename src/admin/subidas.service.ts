@@ -15,7 +15,34 @@ const TIPOS = new Map([
  * podría pedir `carpeta: "mockups/tshirt"` y sobrescribir el mockup de una
  * plantilla en uso.
  */
-const CARPETAS = new Set(["categorias", "productos"]);
+const CARPETAS = new Set(["categorias", "productos", "banners"]);
+
+/**
+ * El tope de una subida del backoffice. Los mockups de plantilla son grandes;
+ * está para que un descuido no meta un vídeo, no para apretar.
+ */
+const MAXIMO = 25 * 1024 * 1024;
+
+/**
+ * El tamaño que declara el navegador, que es el que se firma.
+ *
+ * TIENE QUE SER EL DE VERDAD: S3 exige que el `Content-Length` del PUT sea
+ * EXACTAMENTE el firmado, así que declarar de menos no sirve para colar un
+ * archivo grande —la firma deja de valer— y declarar el máximo a ciegas, como
+ * se hacía antes, hacía fallar toda subida que no pesara justo 25 MB.
+ */
+function tamano(v: unknown) {
+	const n = Number(v);
+	if (!Number.isInteger(n) || n <= 0) {
+		throw new BadRequestException("Falta el tamaño del archivo");
+	}
+	if (n > MAXIMO) {
+		throw new BadRequestException(
+			`El archivo pesa demasiado. El máximo son ${Math.round(MAXIMO / 1024 / 1024)} MB.`,
+		);
+	}
+	return n;
+}
 
 /** Todo lo que llega del navegador y acaba en una llave de S3 pasa por aquí. */
 const limpio = (s: unknown) =>
@@ -54,7 +81,7 @@ export class SubidasService {
 		   siempre, y re-subir un lado no obliga a invalidar nada. */
 		const llave = `mockups/${templateId}/${side}-${randomBytes(6).toString("hex")}.${ext}`;
 
-		return this.firmar(llave, contentType);
+		return this.firmar(llave, contentType, tamano(cuerpo.bytes));
 	}
 
 	/**
@@ -76,16 +103,14 @@ export class SubidasService {
 		}
 
 		const llave = `medios/${carpeta}/${randomBytes(8).toString("hex")}.${ext}`;
-		return this.firmar(llave, contentType);
+		return this.firmar(llave, contentType, tamano(cuerpo.bytes));
 	}
 
-	private async firmar(llave: string, contentType: string) {
+	private async firmar(llave: string, contentType: string, bytes: number) {
 		const { uploadUrl, url } = await this.almacen.urlParaMedios(
 			llave,
 			contentType,
-			/* El admin sube mockups de plantilla, que pueden ser grandes; el tope
-			   está para que un descuido no meta un vídeo, no para apretar. */
-			25 * 1024 * 1024,
+			bytes,
 		);
 
 		/* `path` y no `url`: es el nombre que el backoffice ya lee. */

@@ -2,6 +2,7 @@ import {
 	boolean,
 	index,
 	integer,
+	jsonb,
 	numeric,
 	pgEnum,
 	pgTable,
@@ -23,6 +24,37 @@ export const estadoPaquete = pgEnum("estado_paquete", [
 	"archivado",
 ]);
 
+/**
+ * El banner publicitario de una categoría de paquetes, tal y como lo guarda
+ * el admin.
+ *
+ * VA EN UN JSONB Y NO EN DOCE COLUMNAS porque es una pieza de presentación y
+ * se va a mover: hoy son título, texto, imagen y tres colores, y mañana un
+ * vídeo o una segunda imagen. Ninguno de estos campos se consulta ni se
+ * ordena por él —siempre se lee la categoría entera—, así que una columna por
+ * campo sólo compraría migraciones.
+ *
+ * LO QUE PROMETA TIENE QUE SER VERDAD: aquí no hay cupones ni precios. El
+ * descuento vive en el paquete (`descuento_porcentaje`) y es lo único que la
+ * caja sabe cobrar.
+ */
+export type BannerCategoria = {
+	titulo: string;
+	texto: string | null;
+	/** La pastilla de arriba: una etiqueta corta, no una frase. */
+	etiqueta: string | null;
+	/** Ruta nuestra (`/medios/...`); nunca una URL de fuera. */
+	imagen: string | null;
+	alt: string | null;
+	/** Dónde va la imagen respecto al texto. */
+	lado: "izquierda" | "derecha" | "fondo";
+	colorFondo: string;
+	colorTexto: string;
+	/** El color de la pastilla y del botón. */
+	colorAcento: string;
+	boton: { texto: string; enlace: string } | null;
+};
+
 /** Taxonomía de paquetes, independiente de las categorías de productos. */
 export const categoriasPaquete = pgTable(
 	"categorias_paquete",
@@ -33,6 +65,9 @@ export const categoriasPaquete = pgTable(
 		descripcion: text(),
 		orden: integer().notNull().default(0),
 		activa: boolean().notNull().default(true),
+		/* Sin banner la categoría se pinta sin él: es opcional a propósito,
+		   una categoría recién creada no tiene por qué esperar a una foto. */
+		banner: jsonb().$type<BannerCategoria>(),
 		...marcas,
 	},
 	(t) => [uniqueIndex("categorias_paquete_slug_unico").on(t.slug)],

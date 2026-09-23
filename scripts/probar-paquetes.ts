@@ -118,9 +118,88 @@ async function principal() {
 		console.log(
 			"Paquetes: propuesta, revisión, publicación, precio, conjunto completo y archivo correctos",
 		);
+		await probarBanner(servicio, db);
 	} finally {
 		if (id) await db.delete(e.paquetes).where(eq(e.paquetes.id, id));
 		await pool.end();
+	}
+}
+
+/**
+ * El banner publicitario de una categoría: que guarde lo que el admin escribe
+ * y que rechace lo que no puede aceptar.
+ *
+ * LAS DOS COSAS QUE SE PRUEBAN DE VERDAD son la imagen de fuera y el enlace
+ * absoluto: son las que convierten el banner en un redirector con la cara de
+ * Kustto o en una foto que alguien más puede cambiar después.
+ */
+async function probarBanner(
+	servicio: PaquetesService,
+	db: ReturnType<typeof drizzle>,
+) {
+	const creada = await servicio.crearCategoria({
+		nombre: `Prueba de banner ${randomUUID().slice(0, 8)}`,
+	});
+	try {
+		await servicio.actualizarCategoria(creada.id, {
+			banner: {
+				titulo: "Que se lleven algo más que la foto",
+				texto: "Totes para los invitados y detalles para los padrinos.",
+				etiqueta: "Temporada",
+				imagen: "/medios/banners/abc123.jpg",
+				alt: "Novios con playeras conmemorativas",
+				lado: "izquierda",
+				colorFondo: "#233328",
+				colorTexto: "#FFFFFF",
+				colorAcento: "#aeff6e",
+				boton: { texto: "Ver paquetes", enlace: "/paquetes?categoria=bodas" },
+			},
+		});
+		const guardada = (await servicio.categorias()).find(
+			(c) => c.id === creada.id,
+		);
+		if (
+			guardada?.banner?.titulo !== "Que se lleven algo más que la foto" ||
+			guardada.banner.lado !== "izquierda" ||
+			/* Se normaliza a minúsculas para que el color se pueda comparar. */
+			guardada.banner.colorTexto !== "#ffffff" ||
+			guardada.banner.boton?.enlace !== "/paquetes?categoria=bodas"
+		)
+			throw new Error("El banner no se guardó como se mandó");
+
+		const invalidos: [string, Record<string, unknown>][] = [
+			["imagen de otro sitio", { imagen: "https://ejemplo.com/foto.jpg" }],
+			["enlace absoluto", { boton: { texto: "Ir", enlace: "https://x.com" } }],
+			[
+				"enlace protocolo relativo",
+				{ boton: { texto: "Ir", enlace: "//x.com" } },
+			],
+			["color inventado", { colorFondo: "verde" }],
+			["lado inventado", { lado: "arriba" }],
+			["sin título", { titulo: "" }],
+		];
+		for (const [caso, cambio] of invalidos) {
+			let rechazado = false;
+			try {
+				await servicio.actualizarCategoria(creada.id, {
+					banner: { titulo: "Título", lado: "derecha", ...cambio },
+				});
+			} catch {
+				rechazado = true;
+			}
+			if (!rechazado) throw new Error(`El banner aceptó ${caso}`);
+		}
+
+		await servicio.actualizarCategoria(creada.id, { banner: null });
+		const vacia = (await servicio.categorias()).find((c) => c.id === creada.id);
+		if (vacia?.banner !== null) throw new Error("El banner no se pudo borrar");
+		console.log(
+			"Banner de categoría: guardado, normalizado, borrado y rechazos correctos",
+		);
+	} finally {
+		await db
+			.delete(e.categoriasPaquete)
+			.where(eq(e.categoriasPaquete.id, creada.id));
 	}
 }
 

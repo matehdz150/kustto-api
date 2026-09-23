@@ -71,6 +71,13 @@
       "when": 1790053709526,
       "tag": "0009_loose_valkyrie",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1790134572210,
+      "tag": "0010_banner_de_categoria",
+      "breakpoints": true
     }
   ]
 }

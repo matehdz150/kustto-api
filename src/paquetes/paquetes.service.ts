@@ -76,6 +76,83 @@ function piezas(v: unknown): Pieza[] {
 	return resultado;
 }
 
+const HEX = /^#[0-9a-f]{6}$/i;
+const LADOS = new Set(["izquierda", "derecha", "fondo"]);
+
+function color(v: unknown, campo: string, siFalta: string) {
+	if (v === undefined || v === null || v === "") return siFalta;
+	const valor = String(v).trim().toLowerCase();
+	if (!HEX.test(valor))
+		throw new BadRequestException(`${campo}: usa un color como #1a2b3c`);
+	return valor;
+}
+
+/**
+ * El banner publicitario de una categoría, tal como llega del admin.
+ *
+ * `null` lo borra; un objeto lo reemplaza entero. No se hace mezcla campo a
+ * campo a propósito: el formulario manda el banner completo y una mezcla
+ * dejaría imposible vaciar un texto.
+ *
+ * LA IMAGEN TIENE QUE SER NUESTRA. Es la misma regla que las fotos de
+ * producto (`taller/validacion.ts`): una URL de fuera la puede cambiar quien
+ * la aloja después de que el admin la aprobó, y además se serviría desde otro
+ * origen.
+ *
+ * EL ENLACE DEL BOTÓN TAMBIÉN. Un banner es lo más visible del sitio; si
+ * aceptara `https://…`, quien entre al admin tendría un redirector con la cara
+ * de Kustto para mandar gente a donde quiera.
+ */
+function banner(v: unknown) {
+	if (v === null) return null;
+	if (typeof v !== "object" || Array.isArray(v))
+		throw new BadRequestException("Banner inválido");
+	const b = v as Record<string, unknown>;
+
+	const imagen = texto(b.imagen, "Imagen", 300, false);
+	if (imagen && !imagen.startsWith("/medios/"))
+		throw new BadRequestException(
+			"La imagen del banner tiene que estar subida aquí",
+		);
+
+	const lado = String(b.lado ?? "derecha");
+	if (!LADOS.has(lado))
+		throw new BadRequestException(
+			`Lado inválido: usa ${[...LADOS].join(", ")}`,
+		);
+
+	let boton: { texto: string; enlace: string } | null = null;
+	if (b.boton !== undefined && b.boton !== null) {
+		const x = b.boton as Record<string, unknown>;
+		const etiqueta = texto(x.texto, "Texto del botón", 40, false);
+		const enlace = texto(x.enlace, "Enlace del botón", 200, false);
+		if (etiqueta || enlace) {
+			if (!etiqueta || !enlace)
+				throw new BadRequestException(
+					"El botón necesita texto y enlace, o ninguno de los dos",
+				);
+			if (!enlace.startsWith("/") || enlace.startsWith("//"))
+				throw new BadRequestException(
+					"El enlace del botón tiene que ser una ruta del sitio, como /paquetes",
+				);
+			boton = { texto: etiqueta, enlace };
+		}
+	}
+
+	return {
+		titulo: texto(b.titulo, "Título del banner", 80) ?? "",
+		texto: texto(b.texto, "Texto del banner", 240, false),
+		etiqueta: texto(b.etiqueta, "Etiqueta del banner", 40, false),
+		imagen,
+		alt: texto(b.alt, "Texto alternativo", 160, false),
+		lado: lado as "izquierda" | "derecha" | "fondo",
+		colorFondo: color(b.colorFondo, "Color de fondo", "#233328"),
+		colorTexto: color(b.colorTexto, "Color del texto", "#ffffff"),
+		colorAcento: color(b.colorAcento, "Color de acento", "#aeff6e"),
+		boton,
+	};
+}
+
 function precio(v: unknown) {
 	const n = Number(v);
 	if (
@@ -119,6 +196,7 @@ export class PaquetesService {
 			descripcion: c.descripcion,
 			orden: c.orden,
 			activa: c.activa,
+			banner: c.banner ?? null,
 		}));
 	}
 
@@ -161,6 +239,7 @@ export class PaquetesService {
 				throw new BadRequestException("activa debe ser verdadero o falso");
 			cambios.activa = c.activa;
 		}
+		if (c.banner !== undefined) cambios.banner = banner(c.banner);
 		if (Object.keys(cambios).length === 1)
 			throw new BadRequestException("Nada que actualizar");
 		const [fila] = await this.db

@@ -1,0 +1,1 @@
+ALTER TABLE "categorias_paquete" ADD COLUMN "banner" jsonb;

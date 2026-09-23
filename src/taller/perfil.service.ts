@@ -11,6 +11,9 @@ import type { Identidad } from "../auth/identidad";
 import { DB, type Db } from "../db/db.module";
 import * as e from "../db/esquema";
 
+/** Lo que cabe en una foto de producto. */
+const MAXIMO_FOTO = 25 * 1024 * 1024;
+
 const TIPOS = new Map([
 	["image/png", "png"],
 	["image/jpeg", "jpg"],
@@ -140,10 +143,24 @@ export class TallerService {
 
 		const llave = `medios/productos/${quien.sub}/${randomBytes(8).toString("hex")}.${ext}`;
 
+		/* EL TAMAÑO FIRMADO ES EL QUE DECLARA EL NAVEGADOR, no el máximo: S3
+		   exige que el `Content-Length` del PUT sea exactamente el firmado, así
+		   que firmar 25 MB a ciegas hacía fallar toda foto que no pesara justo
+		   eso. Declarar de menos tampoco cuela nada: la firma deja de valer. */
+		const bytes = Number(cuerpo.bytes);
+		if (!Number.isInteger(bytes) || bytes <= 0) {
+			throw new BadRequestException("Falta el tamaño de la foto");
+		}
+		if (bytes > MAXIMO_FOTO) {
+			throw new BadRequestException(
+				`Esa foto pesa demasiado. El máximo son ${Math.round(MAXIMO_FOTO / 1024 / 1024)} MB.`,
+			);
+		}
+
 		const { uploadUrl, url } = await this.almacen.urlParaMedios(
 			llave,
 			contentType,
-			25 * 1024 * 1024,
+			bytes,
 		);
 
 		/* `path` y no `url`: es el nombre que el asistente ya lee. */
