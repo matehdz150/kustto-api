@@ -1,0 +1,149 @@
+# Lo que tiene que pasar antes de que algo llegue a `main`.
+#
+# Corre en cada PR hacia `main` y en cada push a `dev` y `main`. Para que de
+# verdad BLOQUEE el merge hay que marcar estos jobs como obligatorios en la
+# regla de la rama `main` (Settings → Rules): un workflow en rojo, por sí solo,
+# no impide darle a "Merge".
+#
+# QUÉ NO CORRE AQUÍ, y por qué: los `probar:*`. Algunos hablan con S3 de
+# verdad —a propósito, ver el README— y eso en CI serían credenciales de
+# producción en un runner. Se corren a mano antes de abrir el PR.
+
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [dev, main]
+
+# Un push nuevo a la misma rama deja viejo al anterior: no tiene sentido
+# terminarlo.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  calidad:
+    name: Formato, lint, tipos y build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # La versión de pnpm sale de `packageManager` en package.json.
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # `biome ci` no escribe nada: falla si el formato o el lint no pasan.
+      # Los avisos (`any`, `!`) no fallan; los errores sí.
+      - name: Biome
+        run: pnpm exec biome ci --reporter=github .
+
+      - name: Tipos (API)
+        run: pnpm exec tsc --noEmit -p tsconfig.json
+
+      # Los scripts de `scripts/` no entran en `nest build`: sin esto, un
+      # cambio de esquema que rompe `desde-dynamo` pasaría hasta el día del
+      # corte, que es cuando se usa.
+      - name: Tipos (scripts)
+        run: pnpm exec tsc --noEmit -p tsconfig.scripts.json
+
+      - name: Build
+        run: pnpm build
+
+  migraciones:
+    name: Esquema y migraciones
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: kustto
+          POSTGRES_PASSWORD: kustto
+          POSTGRES_DB: kustto
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U kustto -d kustto"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgres://kustto:kustto@localhost:5432/kustto
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      # Si alguien cambia `src/db/esquema` y olvida `pnpm db:generar`, la
+      # imagen arranca con un esquema que la base no tiene y revienta en la
+      # primera consulta. Aquí se genera y no debe salir nada nuevo.
+      - name: El esquema y las migraciones cuadran
+        run: |
+          pnpm exec drizzle-kit generate --name ci
+          if [ -n "$(git status --porcelain migraciones)" ]; then
+            echo "::error::El esquema cambió y falta la migración. Corre 'pnpm db:generar' y súbela."
+            git status --porcelain migraciones
+            exit 1
+          fi
+
+      # Sobre una base vacía, como la de producción el primer día. Dos veces:
+      # la segunda no debe hacer nada, porque el contenedor migra en cada
+      # arranque.
+      - name: Aplicar las migraciones
+        run: |
+          pnpm db:migrar
+          pnpm db:migrar
+
+  imagen:
+    name: Imagen de Docker
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ─── CD ────────────────────────────────────────────────────────────────
+  # Al llegar a `main`, la imagen se publica en GitHub Container Registry con
+  # la etiqueta del commit y `latest`. Desplegarla depende de dónde se
+  # hospede, y eso todavía no está decidido: el paso de deploy va aquí.
+  publicar:
+    name: Publicar imagen
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [calidad, migraciones, imagen]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}:${{ github.sha }}
+            ghcr.io/${{ github.repository }}:latest
+          cache-from: type=gha

@@ -1,0 +1,6 @@
+# Lo que el motor necesita, y nada más.
+#
+# `boto3` se fue con el `AwsRuntime`: este archivo ya no habla con AWS — la
+# cola, la base y S3 los lleva el proceso de TypeScript que lo invoca.
+Pillow==11.3.0
+pyembroidery==1.5.1

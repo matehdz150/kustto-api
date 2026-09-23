@@ -1,0 +1,139 @@
+# El sistema entero, en local.
+#
+#   docker compose up
+#
+# Lo que NO está aquí, a propósito: S3. El bucket real sigue cerrado y se usa
+# con credenciales reales; emularlo no probaría permisos ni firmas reales.
+
+name: kustto
+
+# LOS PUERTOS DEL HOST NO SON LOS DE DENTRO, y es a propósito: en esta máquina
+# ya corre otro compose (belza-api) con postgres en 5432 y 5433, redis en 6379 y 6380, y su
+# API en 8000. Dentro de la red de Docker los servicios se llaman por su
+# nombre, así que esto sólo cambia por dónde se entra desde fuera.
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: kustto
+      POSTGRES_PASSWORD: kustto
+      POSTGRES_DB: kustto
+    ports: ["${PUERTO_POSTGRES:-5434}:5432"]
+    volumes: ["datos-postgres:/var/lib/postgresql/data"]
+    healthcheck:
+      # `-U kustto` no sobra: sin él pg_isready pregunta por el usuario del
+      # sistema (root) y el healthcheck falla con la base perfectamente viva.
+      test: ["CMD-SHELL", "pg_isready -U kustto -d kustto"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    # `appendonly` para que una cola a medias sobreviva a un reinicio: sin esto,
+    # los trabajos encolados y no consumidos se pierden al bajar el compose.
+    command: redis-server --appendonly yes
+    ports: ["${PUERTO_REDIS:-6381}:6379"]
+    volumes: ["datos-redis:/data"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # Bandeja local: captura códigos e invitaciones sin enviar correos reales.
+  mailpit:
+    image: axllent/mailpit:v1.27
+    environment:
+      MP_DATABASE: /data/mailpit.db
+    ports:
+      - "127.0.0.1:${PUERTO_MAILPIT:-8026}:8025"
+      - "127.0.0.1:${PUERTO_SMTP:-1026}:1025"
+    volumes: ["datos-mailpit:/data"]
+
+  migraciones:
+    build: .
+    command: ["node", "dist/db/migrar.js"]
+    env_file: [.env]
+    environment:
+      DATABASE_URL: postgres://kustto:kustto@postgres:5432/kustto
+    depends_on:
+      postgres: { condition: service_healthy }
+    # Corre, migra y se va. Los demás esperan a que TERMINE BIEN.
+    restart: "no"
+
+  api:
+    build: .
+    env_file: [.env]
+    environment:
+      DATABASE_URL: postgres://kustto:kustto@postgres:5432/kustto
+      REDIS_URL: redis://redis:6379
+      SMTP_URL: ${SMTP_URL:-smtp://mailpit:1025}
+    ports: ["${PUERTO_API:-8001}:8000"]
+    volumes:
+      # El `~/.aws` del host, sólo lectura.
+      #
+	  # S3 se queda, así que la API necesita credenciales de verdad. En un
+      # servidor esto se borra y las da el rol de la máquina.
+      - ${HOME}/.aws:/home/node/.aws:ro
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      migraciones: { condition: service_completed_successfully }
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:8000/salud').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  # Los workers de TypeScript: correo, envíos, archivo de impresión.
+  # Misma imagen que la API, otro proceso.
+  workers:
+    build: .
+    command: ["node", "dist/workers/main.js"]
+    env_file: [.env]
+    volumes:
+      - ${HOME}/.aws:/home/node/.aws:ro
+    environment:
+      DATABASE_URL: postgres://kustto:kustto@postgres:5432/kustto
+      REDIS_URL: redis://redis:6379
+      SMTP_URL: ${SMTP_URL:-smtp://mailpit:1025}
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      migraciones: { condition: service_completed_successfully }
+
+  # El worker de BORDADO, en su propia imagen.
+  #
+  # NO ARRANCA POR DEFECTO: lleva Ink/Stitch, Python, GTK y xvfb, y hoy la
+  # preparación de bordado está apagada a la espera de las pruebas de costura.
+  # Se levanta a propósito:
+  #
+  #     docker compose --profile bordado up bordado
+  #
+  # Es el ÚNICO sitio donde `BORDADO_ACTIVO` va en true: encenderlo en la
+  # imagen normal haría que los trabajos se tomaran —y se marcaran como
+  # PROCESSING— para morir enseguida sin motor que los atienda.
+  bordado:
+    profiles: ["bordado"]
+    build:
+      context: .
+      dockerfile: servicios/bordado/Dockerfile
+    env_file: [.env]
+    environment:
+      DATABASE_URL: postgres://kustto:kustto@postgres:5432/kustto
+      REDIS_URL: redis://redis:6379
+      BORDADO_ACTIVO: "true"
+    volumes:
+      - ${HOME}/.aws:/home/node/.aws:ro
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      migraciones: { condition: service_completed_successfully }
+
+volumes:
+  datos-postgres:
+  datos-redis:
+  datos-mailpit:
