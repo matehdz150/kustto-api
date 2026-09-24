@@ -195,6 +195,9 @@ async function principal() {
 
 	await categorias.borrar(c2.id);
 	comprobar("una vacía sí se borra", true);
+	// `c1` también es una categoría temporal. Si queda guardada, "Otro nombre"
+	// termina apareciendo en la navegación cuando alguien publica un producto ahí.
+	await categorias.borrar(c1.id);
 
 	/* ─── 3. Revisión de productos ────────────────────────────────────── */
 	console.log("\n3. Revisión de productos");

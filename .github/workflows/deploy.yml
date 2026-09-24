@@ -1,4 +1,4 @@
-name: Build and Push API
+name: Build, Push and Deploy API
 
 on:
   push:
@@ -9,43 +9,23 @@ permissions:
   contents: read
   id-token: write
 
+concurrency:
+  group: kustto-api-production
+  cancel-in-progress: false
+
 env:
   AWS_REGION: us-east-2
   ECR_REPOSITORY: kustto-api
+  EC2_INSTANCE_ID: i-0a16e3e3416615846
 
 jobs:
-  build:
+  build-and-deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Debug GitHub context
-        run: |
-          echo "Repository: $GITHUB_REPOSITORY"
-          echo "Ref: $GITHUB_REF"
-          echo "Ref name: $GITHUB_REF_NAME"
-
-      - name: Show OIDC claims
-        env:
-          AUDIENCE: sts.amazonaws.com
-        run: |
-          TOKEN_JSON=$(curl -s \
-            -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
-            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=$AUDIENCE")
-
-          ID_TOKEN=$(echo "$TOKEN_JSON" | jq -r '.value')
-
-          PAYLOAD=$(echo "$ID_TOKEN" | cut -d '.' -f2)
-
-          PADDING=$(( (4 - ${#PAYLOAD} % 4) % 4 ))
-          PAYLOAD="${PAYLOAD}$(printf '=%.0s' $(seq 1 $PADDING))"
-
-          echo "$PAYLOAD" \
-            | tr '_-' '/+' \
-            | base64 -d \
-            | jq
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -69,3 +49,73 @@ jobs:
           tags: |
             ${{ steps.ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:latest
             ${{ steps.ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Deploy API via SSM
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "Sending deploy command to EC2..."
+
+          COMMAND_ID=$(aws ssm send-command \
+            --instance-ids "${EC2_INSTANCE_ID}" \
+            --document-name "AWS-RunShellScript" \
+            --comment "Deploy kustto-api ${GITHUB_SHA}" \
+            --parameters '{"commands":["sudo -H -u ec2-user /opt/kustto/deploy-api.sh"]}' \
+            --query "Command.CommandId" \
+            --output text)
+
+          echo "SSM Command ID: ${COMMAND_ID}"
+
+          STATUS="Pending"
+
+          for i in {1..60}; do
+            STATUS=$(aws ssm get-command-invocation \
+              --command-id "${COMMAND_ID}" \
+              --instance-id "${EC2_INSTANCE_ID}" \
+              --query "Status" \
+              --output text 2>/dev/null || echo "Pending")
+
+            echo "Deploy status: ${STATUS}"
+
+            case "${STATUS}" in
+              Success)
+                break
+                ;;
+
+              Failed|Cancelled|TimedOut|Cancelling)
+                echo "Deployment failed."
+
+                aws ssm get-command-invocation \
+                  --command-id "${COMMAND_ID}" \
+                  --instance-id "${EC2_INSTANCE_ID}" \
+                  --query '{
+                    Status: Status,
+                    Stdout: StandardOutputContent,
+                    Stderr: StandardErrorContent
+                  }'
+
+                exit 1
+                ;;
+            esac
+
+            sleep 5
+          done
+
+          if [ "${STATUS}" != "Success" ]; then
+            echo "Deployment timed out waiting for SSM."
+            exit 1
+          fi
+
+          echo "Deployment succeeded."
+
+          aws ssm get-command-invocation \
+            --command-id "${COMMAND_ID}" \
+            --instance-id "${EC2_INSTANCE_ID}" \
+            --query '{
+              Status: Status,
+              Stdout: StandardOutputContent,
+              Stderr: StandardErrorContent
+            }'

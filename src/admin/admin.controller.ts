@@ -181,6 +181,22 @@ export class ArchivosController {
 		return this.servir(`eventos/${ruta.join("/")}`, res);
 	}
 
+	/**
+	 * El `diseno.json` de un artículo del carrito, para volver a abrirlo en el
+	 * editor: un grupo de un paquete que se quiere corregir antes de pagar.
+	 *
+	 * SÓLO ESE ARCHIVO. El arte de producción (los PNG) no sale por aquí: lo
+	 * único que lo protege es que el id del artículo es un UUID que genera el
+	 * servidor, y no hace falta exponerlo para editar. Es el mismo trato que ya
+	 * tienen los diseños de un evento.
+	 */
+	@Get("archivos-carritos/*ruta")
+	carritos(@Param("ruta") ruta: string[], @Res() res: Response) {
+		if (ruta.length !== 2 || ruta[1] !== "diseno.json")
+			throw new NotFoundException();
+		return this.servir(`carritos/${ruta.join("/")}`, res);
+	}
+
 	private async servir(llave: string, res: Response) {
 		/* `..` en la ruta saldría del prefijo y dejaría leer cualquier objeto del
 		   bucket. Llega de la URL, así que se comprueba. */

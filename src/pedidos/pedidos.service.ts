@@ -280,22 +280,23 @@ export class PedidosService {
 					"La categoría del paquete ya no está disponible",
 				);
 			const suyos = componentes.filter((p) => p.paqueteId === dato.id);
-			if (!suyos.length || suyos.length !== dato.indices.length)
+			if (!suyos.length)
 				throw new BadRequestException("El paquete debe comprarse completo");
-			const usados = new Set<string>();
-			let cantidad: number | null = null;
+
+			/* UN PRODUCTO DEL PAQUETE PUEDE LLEGAR EN VARIAS LÍNEAS: una por
+			   diseño. "Cinco playeras" se puede pedir como tres con un diseño y
+			   dos con otro, y cada grupo es su propia línea con su arte. Lo que se
+			   valida es la SUMA por producto, no que haya una línea por producto.
+			   Lo que no cambia: todos los productos del paquete tienen que estar,
+			   y ninguno de fuera. */
+			const piezasPorProducto = new Map<string, number>();
 			for (const i of dato.indices) {
 				const producto = productos[i];
 				const componente = suyos.find((p) => p.productoId === producto.id);
-				if (
-					!componente ||
-					usados.has(producto.id) ||
-					producto.tallerId !== paquete.tallerId
-				)
+				if (!componente || producto.tallerId !== paquete.tallerId)
 					throw new BadRequestException(
 						"Los productos no corresponden al paquete",
 					);
-				usados.add(producto.id);
 				const tallas = Array.isArray(lineas[i].tallas) ? lineas[i].tallas : [];
 				if (
 					!tallas.length ||
@@ -311,7 +312,22 @@ export class PedidosService {
 					(s: number, t: any) => s + Number(t?.piezas ?? 0),
 					0,
 				);
-				const veces = piezas / componente.cantidad;
+				piezasPorProducto.set(
+					producto.id,
+					(piezasPorProducto.get(producto.id) ?? 0) + piezas,
+				);
+			}
+			if (suyos.some((c) => !piezasPorProducto.has(c.productoId)))
+				throw new BadRequestException("El paquete debe comprarse completo");
+
+			/* Cuántas veces se compra el paquete: la misma para todos sus
+			   productos. Dos paquetes de "5 playeras + 5 tazas" son 10 y 10, no
+			   10 y 5. */
+			let cantidad: number | null = null;
+			for (const componente of suyos) {
+				const veces =
+					(piezasPorProducto.get(componente.productoId) ?? 0) /
+					componente.cantidad;
 				if (
 					!Number.isInteger(veces) ||
 					veces < 1 ||

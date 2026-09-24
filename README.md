@@ -167,6 +167,17 @@ funciona pero no puede entregar códigos ni enlaces.
 
 ## Traer los datos de DynamoDB
 
+Para llevar los datos **actuales de PostgreSQL local** a producción, incluidas
+sus imágenes de los buckets nuevos y excluyendo pedidos/compras:
+
+```bash
+pnpm migrar:local-a-produccion
+```
+
+Ver [`scripts/migracion/README.md`](scripts/migracion/README.md) para el alcance,
+las verificaciones y los respaldos. El script `db:desde-dynamo` es una herramienta
+separada para el sistema anterior y no forma parte de esta migración.
+
 ```bash
 AWS_PROFILE=kustto-admin pnpm db:desde-dynamo
 ```
