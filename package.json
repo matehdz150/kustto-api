@@ -9,6 +9,7 @@
 		"start": "node dist/main.js",
 		"db:generar": "drizzle-kit generate",
 		"db:migrar": "tsx src/db/migrar.ts",
+		"migrar:local-a-produccion": "python3 scripts/migracion/local-a-produccion.py",
 		"db:desde-dynamo": "tsx scripts/desde-dynamo.ts",
 		"db:exportar-semilla": "node --env-file=.env --import tsx scripts/exportar-semilla.ts",
 		"db:sembrar": "node --env-file=.env --import tsx scripts/sembrar.ts",

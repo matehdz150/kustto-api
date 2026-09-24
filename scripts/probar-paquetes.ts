@@ -112,11 +112,48 @@ async function principal() {
 		}
 		if (!precioViejoRechazado)
 			throw new Error("El checkout aceptó un precio de carrito desactualizado");
+
+		/* Un producto del paquete partido en dos líneas —una por diseño— es un
+		   paquete completo si la suma cuadra, y cobra lo mismo. */
+		const partidos = [productos[0].id, productos[0].id, productos[1].id];
+		const productosPartidos = await internos.leerProductosPublicados(partidos);
+		const lineasPartidas = [
+			{ ...lineas[0], tallas: [{ size: "M", piezas: 1 }] },
+			{ ...lineas[0], tallas: [{ size: "L", piezas: 1 }] },
+			lineas[1],
+		];
+		const partido = await internos.validarPaquetes(
+			lineasPartidas,
+			productosPartidos,
+		);
+		if (partido.get(grupo)?.centavos !== centavosDelPaquete(100.01, 10))
+			throw new Error("Partir un producto en dos diseños cambió el precio");
+
+		let sumaMalRechazada = false;
+		try {
+			await internos.validarPaquetes(
+				[
+					...lineasPartidas.slice(0, 2),
+					{ ...lineas[0], tallas: [{ size: "S", piezas: 1 }] },
+					lineas[1],
+				],
+				await internos.leerProductosPublicados([
+					productos[0].id,
+					productos[0].id,
+					productos[0].id,
+					productos[1].id,
+				]),
+			);
+		} catch {
+			sumaMalRechazada = true;
+		}
+		if (!sumaMalRechazada)
+			throw new Error("El checkout aceptó más piezas de las del paquete");
 		await servicio.archivar(taller.id, id);
 		if ((await servicio.listarPublico()).some((p) => p.id === id))
 			throw new Error("El paquete archivado sigue publicado");
 		console.log(
-			"Paquetes: propuesta, revisión, publicación, precio, conjunto completo y archivo correctos",
+			"Paquetes: propuesta, revisión, publicación, precio, conjunto completo, productos partidos por diseño y archivo correctos",
 		);
 		await probarBanner(servicio, db);
 	} finally {
