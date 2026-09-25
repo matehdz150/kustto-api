@@ -1,0 +1,4 @@
+rembg[cpu]==2.0.85
+onnxruntime==1.30.0
+Pillow>=12,<13
+psutil>=6,<8

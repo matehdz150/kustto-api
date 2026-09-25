@@ -164,6 +164,17 @@ const esquema = z.object({
 	BORDADO_TIMEOUT_MS: z.coerce.number().default(180_000),
 	/** Cuántas digitalizaciones a la vez. Cada una se come una CPU entera. */
 	BORDADO_CONCURRENCIA: z.coerce.number().default(1),
+
+	/* ─── Quitar fondo ────────────────────────────────────────────────────
+	   Una Lambda con ISNet que lee de SU PROPIO bucket y la despierta SU
+	   PROPIA cola (`kustto-infra/bg-removal`). No se reusan los buckets de la
+	   aplicación: la Lambda sólo puede leer `input/` y escribir `output/` de
+	   éste, y así un fallo suyo no toca los archivos de nadie.
+
+	   Sin las dos variables la función está apagada: las rutas contestan 503
+	   y el editor lo dice, en vez de firmar subidas a un bucket que no hay. */
+	FONDO_BUCKET: opcional(z.string()),
+	FONDO_COLA_URL: opcional(z.string().url()),
 });
 
 export type Entorno = z.infer<typeof esquema>;
