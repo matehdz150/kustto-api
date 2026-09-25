@@ -13,6 +13,7 @@ import { CuentasModule } from "./cuentas/cuentas.module";
 import { DbModule } from "./db/db.module";
 import { EnviosModule } from "./envios/envios.module";
 import { EventosModule } from "./eventos/eventos.module";
+import { FondosModule } from "./fondos/fondos.module";
 import { PaquetesModule } from "./paquetes/paquetes.module";
 import { PedidosModule } from "./pedidos/pedidos.module";
 import { SaludModule } from "./salud/salud.module";
@@ -41,6 +42,7 @@ import { VivoModule } from "./vivo/vivo.module";
 		AdminModule,
 		TallerModule,
 		BordadoModule,
+		FondosModule,
 		VivoModule,
 	],
 })
