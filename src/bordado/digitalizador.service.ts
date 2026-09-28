@@ -2,7 +2,7 @@ import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { Inject, Injectable, Logger } from "@nestjs/common";
 import { and, eq, sql } from "drizzle-orm";
 import { AlmacenService } from "../almacen/almacen.service";
@@ -10,7 +10,17 @@ import { ENTORNO } from "../config/config.module";
 import type { Entorno } from "../config/entorno";
 import { DB, type Db } from "../db/db.module";
 import * as e from "../db/esquema";
+import { type Contexto, correrNucleo, despojar, veredicto } from "./autoridad";
 import type { TrabajoDeBordado } from "./bordado.service";
+import {
+	canonicalJson,
+	contenidoDelOriginal,
+	type EmbroideryDesign,
+	type EmbroideryIssue,
+	validarSolicitudOriginal,
+	validateDesign,
+} from "./contrato";
+import { MAXIMO_PISTA } from "./frontera";
 
 /** Lo que el motor de Python imprime al terminar. */
 type Resultado = {
@@ -19,7 +29,16 @@ type Resultado = {
 	confidence: number;
 	issues: unknown[];
 	metrics: Record<string, number>;
-	artifacts: { dst: string; preview: string; metadata: string };
+	// `identity` (V6.3): qué puntadas del DST son de qué objeto. Sólo lo trae
+	// el perfil con verificación estructural.
+	artifacts: {
+		dst: string;
+		preview: string;
+		metadata: string;
+		identity?: string;
+		/** V6.9.2: la vista del bordado definitivo, para el previsualizador. */
+		embroidered?: string;
+	};
 	hashes: Record<string, string>;
 	engineMs: number;
 };
@@ -28,12 +47,16 @@ const NOMBRES: Record<keyof Resultado["artifacts"], string> = {
 	dst: "design.dst",
 	preview: "preview.png",
 	metadata: "metadata.json",
+	identity: "identity.json",
+	embroidered: "embroideredPreview.png",
 };
 
 const TIPOS: Record<keyof Resultado["artifacts"], string> = {
 	dst: "application/octet-stream",
 	preview: "image/png",
 	metadata: "application/json",
+	identity: "application/json",
+	embroidered: "image/png",
 };
 
 /** El diseño de entrada tiene un techo: no es un archivo que suba nadie. */
@@ -80,13 +103,99 @@ export class DigitalizadorService {
 			join(tmpdir(), `bordado-${jobId.slice(-12)}-`),
 		);
 		const arranque = Date.now();
+		/* V6.9.2: LAS ETAPAS SE PUBLICAN MIENTRAS EL TRABAJO SIGUE, para que el
+		   previsualizador del editor enseñe la forma y las puntadas antes del
+		   veredicto. En orden (una cola) y sin poder tumbar el trabajo: una
+		   etapa que no se sube se pierde, el bordado no. */
+		const prefijo = `embroidery/${trabajo.disenoHash}/${trabajo.id}`;
+		let etapas: Promise<void> = Promise.resolve();
+		const formas: string[] = [];
+		const publicarEtapa = (etapa: string, ruta?: string, datos?: unknown) => {
+			const ms = Date.now() - arranque;
+			etapas = etapas
+				.then(async () => {
+					if (etapa === "colores") {
+						await this.sumarEtapas(jobId, { colores: datos });
+						return;
+					}
+					if (!ruta || (etapa !== "forma" && etapa !== "puntadas")) return;
+					const cuerpo = await readFile(ruta);
+					const nombre = basename(ruta);
+					const clave = `${prefijo}/${nombre.startsWith("etapa-") ? nombre : `etapa-${nombre}`}`;
+					await this.almacen.subirArchivo(
+						clave,
+						cuerpo,
+						ruta.endsWith(".svg") ? "image/svg+xml" : "image/png",
+						createHash("sha256").update(cuerpo).digest("hex"),
+					);
+					if (etapa === "forma") {
+						formas.push(clave);
+						await this.sumarEtapas(jobId, {
+							forma: { claves: [...formas], ms },
+						});
+					} else await this.sumarEtapas(jobId, { puntadas: { clave, ms } });
+				})
+				.catch((error) =>
+					this.log.warn(
+						`Etapa ${etapa} de ${jobId} sin publicar: ${(error as Error).message}`,
+					),
+				);
+		};
 
 		try {
-			const diseno = await this.leerEntrada(trabajo.claveEntrada, disenoHash);
-			const resultado = await this.correrMotor(diseno, carpeta);
+			const esOriginal = trabajo.claveEntrada.endsWith("/original.json");
+			const crudo = await this.leerEntrada(
+				trabajo.claveEntrada,
+				disenoHash,
+				esOriginal ? this.env.BORDADO_MAXIMO_CUERPO_BYTES : MAXIMO_ENTRADA,
+			);
+			const preparado = await this.prepararConAutoridad(
+				trabajo,
+				crudo,
+				esOriginal,
+				carpeta,
+				publicarEtapa,
+			);
+			if (preparado.diseno)
+				publicarEtapa(
+					"colores",
+					undefined,
+					(JSON.parse(preparado.diseno) as EmbroideryDesign).colors.map(
+						(c) => c.displayHex,
+					),
+				);
+			if (preparado.rechazo) {
+				await etapas;
+				await this.fallar(jobId, "DESIGN_REJECTED", preparado.rechazo);
+				this.log.log(`Rechazado por el servidor: ${jobId}`);
+				return { tomado: true, estado: "FAILED" };
+			}
+			const delMotor = await this.correrMotor(
+				preparado.diseno,
+				carpeta,
+				publicarEtapa,
+			);
+			/* EL ESTADO FINAL LO DECIDE LA AUTORIDAD: el motor sólo vio el diseño
+			   del servidor (o, sin autoridad, uno despojado), y encima se aplica
+			   `veredicto`. */
+			const resultado = {
+				...veredicto(delMotor, preparado.contexto),
+				metrics: {
+					...delMotor.metrics,
+					authority: preparado.resumen,
+				} as unknown as Resultado["metrics"],
+			};
 			const claves = await this.publicar(trabajo, resultado, carpeta);
+			await this.almacen.subirArchivo(
+				`embroidery/${trabajo.disenoHash}/${trabajo.id}/design.json`,
+				Buffer.from(preparado.diseno),
+				"application/json",
+				createHash("sha256").update(preparado.diseno).digest("hex"),
+			);
 
-			await this.terminar(jobId, resultado, claves);
+			// Lo que quedara en la cola de etapas, antes del estado final.
+			await etapas;
+			await this.terminar(jobId, resultado, claves, Date.now() - arranque);
 
 			this.log.log(
 				`${resultado.status} ${jobId} en ${Date.now() - arranque} ms ` +
@@ -96,6 +205,7 @@ export class DigitalizadorService {
 			return { tomado: true, estado: resultado.status };
 		} catch (error) {
 			const codigo = this.codigoDe(error);
+			await etapas;
 			await this.fallar(jobId, codigo);
 
 			this.log.error(
@@ -148,16 +258,140 @@ export class DigitalizadorService {
 	 * se guardó y ahora, el objeto pudo cambiar. Es barato y cierra la puerta a
 	 * que el motor cosa algo distinto de lo que se validó.
 	 */
-	private async leerEntrada(clave: string, disenoHash: string) {
+	private async leerEntrada(clave: string, disenoHash: string, maximo: number) {
 		const crudo = await this.almacen.leerTexto(clave);
 
-		if (crudo.length > MAXIMO_ENTRADA) throw new Error("INPUT_TOO_LARGE");
+		if (crudo.length > maximo) throw new Error("INPUT_TOO_LARGE");
 
-		if (createHash("sha256").update(crudo).digest("hex") !== disenoHash) {
+		/* Un original se comprueba por la huella de su contenido (sus imágenes,
+		   por el sha256 de sus píxeles crudos); los bytes de esas imágenes los
+		   comprueba el núcleo al abrirlas contra ese mismo sha256. */
+		const huella = clave.endsWith("/original.json")
+			? createHash("sha256")
+					.update(
+						canonicalJson(
+							contenidoDelOriginal(validarSolicitudOriginal(JSON.parse(crudo))),
+						),
+					)
+					.digest("hex")
+			: createHash("sha256").update(crudo).digest("hex");
+		if (huella !== disenoHash) {
 			throw new Error("DESIGN_HASH_MISMATCH");
 		}
 
 		return crudo;
+	}
+
+	/**
+	 * V6.2: el diseño que se cose y con qué autoridad.
+	 *
+	 * CON ORIGINAL, el núcleo lo prepara en el servidor (misma implementación
+	 * que el navegador) y ése es el diseño. La pista del navegador sólo se usa
+	 * para el diagnóstico de deriva.
+	 *
+	 * SIN AUTORIDAD (cliente viejo, o una ruta que el servidor no puede
+	 * preparar), se cose el diseño del navegador despojado de todo lo que
+	 * afirmaba, y `veredicto` lo deja en REVIEW.
+	 */
+	private async prepararConAutoridad(
+		trabajo: typeof e.trabajosDeBordado.$inferSelect,
+		crudo: string,
+		esOriginal: boolean,
+		carpeta: string,
+		alEtapa?: (etapa: string, ruta: string) => void,
+	): Promise<{
+		diseno: string;
+		contexto: Contexto;
+		resumen: Record<string, unknown>;
+		rechazo?: EmbroideryIssue[];
+	}> {
+		if (!esOriginal) {
+			const { design, delCliente } = despojar(
+				JSON.parse(crudo) as EmbroideryDesign,
+			);
+			return {
+				diseno: canonicalJson(design),
+				contexto: {
+					autoridad: "ninguna",
+					motivo: "SERVER_ORIGINAL_MISSING",
+					delCliente,
+				},
+				resumen: {
+					authority: "none",
+					reason: "SERVER_ORIGINAL_MISSING",
+					clientIssues: delCliente,
+				},
+			};
+		}
+		const pista = await this.leerPista(
+			trabajo.claveEntrada.replace(/original\.json$/, "pista.json"),
+		);
+		const nucleo = await correrNucleo(
+			{
+				original: JSON.parse(crudo),
+				pista,
+				politica: { rasterVectorial: this.env.BORDADO_RASTER_VECTORIAL },
+			},
+			carpeta,
+			{
+				node: this.env.BORDADO_NODE,
+				nucleo: this.env.BORDADO_NUCLEO,
+				timeoutMs: this.env.BORDADO_NUCLEO_TIMEOUT_MS,
+				alEtapa,
+			},
+		);
+		if (nucleo.estado === "preparado")
+			return {
+				diseno: canonicalJson(nucleo.design),
+				contexto: { autoridad: "servidor", diagnostico: nucleo.diagnostico },
+				resumen: {
+					authority: "server",
+					...nucleo.autoridad,
+					nucleusMs: nucleo.ms,
+					client: nucleo.diagnostico.cliente,
+				},
+			};
+		if (nucleo.estado === "rechazado")
+			return {
+				diseno: "",
+				contexto: { autoridad: "servidor", diagnostico: nucleo.diagnostico },
+				resumen: {},
+				rechazo: nucleo.incidencias,
+			};
+		// El original no pasó la frontera del núcleo: el trabajo falla con su código.
+		if (nucleo.estado === "invalido") throw new Error(nucleo.codigo);
+		/* No verificable: sin pista válida no hay nada que coser; con ella, se
+		   cose despojada y sin autoridad. */
+		try {
+			validateDesign(pista);
+		} catch {
+			throw new Error("SERVER_CANNOT_PREPARE");
+		}
+		const { design, delCliente } = despojar(pista as EmbroideryDesign);
+		return {
+			diseno: canonicalJson(design),
+			contexto: {
+				autoridad: "ninguna",
+				motivo: "SERVER_CANNOT_VERIFY",
+				delCliente,
+				detalle: nucleo.codigo,
+			},
+			resumen: {
+				authority: "none",
+				reason: nucleo.codigo,
+				clientIssues: delCliente,
+			},
+		};
+	}
+
+	/** La pista del navegador, si hay y cabe. Nunca decide nada. */
+	private async leerPista(clave: string): Promise<unknown> {
+		try {
+			const crudo = await this.almacen.leerTexto(clave);
+			return crudo.length <= MAXIMO_PISTA ? JSON.parse(crudo) : null;
+		} catch {
+			return null;
+		}
 	}
 
 	/**
@@ -172,14 +406,26 @@ export class DigitalizadorService {
 	 * pero el tope se queda: un diseño que tarda cinco minutos no es un diseño
 	 * lento, es uno que no se va a poder coser.
 	 */
-	private correrMotor(diseno: string, carpeta: string): Promise<Resultado> {
+	private correrMotor(
+		diseno: string,
+		carpeta: string,
+		alEtapa?: (etapa: string, ruta: string) => void,
+	): Promise<Resultado> {
 		return new Promise((resolver, rechazar) => {
 			writeFile(join(carpeta, "design.json"), diseno)
 				.then(() => {
 					const proceso = spawn(
 						this.env.BORDADO_PYTHON,
 						[this.env.BORDADO_MOTOR, join(carpeta, "design.json"), carpeta],
-						{ stdio: ["ignore", "pipe", "pipe"] },
+						{
+							stdio: ["ignore", "pipe", "pipe"],
+							/* V6.9.2: con etapas, el motor anuncia por su salida de errores
+							   las puntadas del primer cosido (`ETAPA {...}`), antes de
+							   validar y reparar. */
+							env: alEtapa
+								? { ...process.env, KUSTTO_ETAPAS: "1" }
+								: process.env,
+						},
 					);
 
 					let salida = "";
@@ -188,8 +434,34 @@ export class DigitalizadorService {
 					proceso.stdout.on("data", (d) => {
 						salida += d;
 					});
+					let pendiente = "";
 					proceso.stderr.on("data", (d) => {
 						errores += d;
+						if (!alEtapa) return;
+						pendiente += d;
+						for (
+							let i = pendiente.indexOf("\n");
+							i >= 0;
+							i = pendiente.indexOf("\n")
+						) {
+							const linea = pendiente.slice(0, i);
+							pendiente = pendiente.slice(i + 1);
+							if (!linea.startsWith("ETAPA ")) continue;
+							try {
+								const { etapa, archivo } = JSON.parse(linea.slice(6)) as {
+									etapa?: unknown;
+									archivo?: unknown;
+								};
+								if (
+									typeof etapa === "string" &&
+									typeof archivo === "string" &&
+									/^[\w.-]+$/.test(archivo)
+								)
+									alEtapa(etapa, join(carpeta, archivo));
+							} catch {
+								// Una línea rota no es una etapa.
+							}
+						}
 					});
 
 					const corte = setTimeout(() => {
@@ -283,10 +555,17 @@ export class DigitalizadorService {
 		jobId: string,
 		resultado: Resultado,
 		claves: Record<string, string>,
+		ms: number,
 	) {
+		/* La vista del bordado definitivo, como etapa: la que el previsualizador
+		   pone en lugar de las puntadas provisionales. */
+		const final = claves.embroidered
+			? { final: { clave: claves.embroidered, ms } }
+			: {};
 		await this.db
 			.update(e.trabajosDeBordado)
 			.set({
+				etapas: sql`coalesce(${e.trabajosDeBordado.etapas}, '{}'::jsonb) || ${JSON.stringify(final)}::jsonb`,
 				estado: resultado.status,
 				decision: resultado.decision,
 				confianza: resultado.confidence,
@@ -308,12 +587,33 @@ export class DigitalizadorService {
 			);
 	}
 
-	private async fallar(jobId: string, codigo: string) {
+	/** Suma etapas a las que ya tenía el trabajo (sólo mientras sigue en curso). */
+	private async sumarEtapas(jobId: string, parcial: Record<string, unknown>) {
+		await this.db
+			.update(e.trabajosDeBordado)
+			.set({
+				etapas: sql`coalesce(${e.trabajosDeBordado.etapas}, '{}'::jsonb) || ${JSON.stringify(parcial)}::jsonb`,
+				actualizadoEn: new Date(),
+			})
+			.where(
+				and(
+					eq(e.trabajosDeBordado.id, jobId),
+					eq(e.trabajosDeBordado.estado, "PROCESSING"),
+				),
+			);
+	}
+
+	private async fallar(
+		jobId: string,
+		codigo: string,
+		incidencias?: EmbroideryIssue[],
+	) {
 		await this.db
 			.update(e.trabajosDeBordado)
 			.set({
 				estado: "FAILED",
 				codigoError: codigo,
+				...(incidencias ? { incidencias } : {}),
 				terminadoEn: new Date(),
 				actualizadoEn: new Date(),
 			})

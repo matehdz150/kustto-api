@@ -18,12 +18,22 @@ import { DB, type Db } from "../db/db.module";
 import * as e from "../db/esquema";
 import {
 	canonicalJson,
+	contenidoDelOriginal,
 	EMBROIDERY_PROFILE_V2,
-	type EmbroideryDesign,
-	embroideryDesignHash,
+	EMBROIDERY_SCHEMA_VERSION,
+	type EmbroideryStages,
 	embroideryJobId,
-	validateDesign,
+	INKSTITCH_ENGINE_VERSION,
+	aplicarPolitica,
+	NUCLEO_VERSION,
+	perfilDeFuentes,
+	sha256,
 } from "./contrato";
+import {
+	ErrorDeFrontera,
+	leerPeticionDeBordado,
+	type PeticionDeBordado,
+} from "./frontera";
 
 export type TrabajoDeBordado = { jobId: string; disenoHash: string };
 
@@ -62,11 +72,52 @@ export class BordadoService {
 	async crear(quien: Identidad, cuerpo: Record<string, any>) {
 		this.exigirActivo();
 
-		const diseno = this.validar(cuerpo?.design);
-		await this.comprobarContraElProducto(diseno);
+		/* V6.2: EL ORIGINAL DECIDE. El cuerpo trae el arte capturado
+		   (`original`) y, como pista, lo que preparó el navegador (`design`).
+		   El servidor volverá a preparar el original él mismo; la pista sólo se
+		   guarda para compararla. Un cliente anterior a V6.2 manda sólo el
+		   diseño: se acepta, pero sin original nunca sale READY. */
+		const peticion = this.validar(cuerpo);
+		const area =
+			peticion.tipo === "original"
+				? {
+						productId: peticion.original.productId,
+						sideId: peticion.original.sideId,
+						widthMm: peticion.original.widthMm,
+						heightMm: peticion.original.heightMm,
+					}
+				: {
+						productId: peticion.design.productId,
+						sideId: peticion.design.sideId,
+						widthMm: peticion.design.physical.widthMm,
+						heightMm: peticion.design.physical.heightMm,
+					};
+		await this.comprobarContraElProducto(area);
 
-		const disenoHash = await embroideryDesignHash(diseno);
-		const jobId = await embroideryJobId(quien.sub, disenoHash);
+		/* EL HASH ES EL DEL ORIGINAL CANÓNICO (o el del diseño, en un cliente
+		   viejo): es lo que el worker vuelve a comprobar antes de preparar, y lo
+		   que el editor puede calcular solo para saber si una respuesta es de lo
+		   que tiene en pantalla. EL ID LLEVA ADEMÁS LA VERSIÓN DEL NÚCLEO: el
+		   mismo original con un servidor nuevo es otro trabajo, porque su
+		   veredicto puede ser otro; con el mismo servidor, el mismo (doble clic). */
+		const entrada =
+			peticion.tipo === "original"
+				? canonicalJson(peticion.original)
+				: canonicalJson(peticion.design);
+		/* Con original, la huella es la de su CONTENIDO (`contenidoDelOriginal`:
+		   las imágenes por el sha256 de sus píxeles crudos, no por sus bytes
+		   comprimidos, que cambian de un compresor a otro). */
+		const disenoHash = await sha256(
+			peticion.tipo === "original"
+				? canonicalJson(contenidoDelOriginal(peticion.original))
+				: entrada,
+		);
+		const jobId = await embroideryJobId(
+			quien.sub,
+			peticion.tipo === "original"
+				? `${disenoHash}:${NUCLEO_VERSION}:${this.env.BORDADO_RASTER_VECTORIAL ? "raster-v5" : "raster-v4"}`
+				: disenoHash,
+		);
 
 		const [existente] = await this.db
 			.select()
@@ -74,8 +125,7 @@ export class BordadoService {
 			.where(eq(e.trabajosDeBordado.id, jobId))
 			.limit(1);
 
-		if (existente)
-			return this.yaExistia(quien, existente, cuerpo?.retry === true);
+		if (existente) return this.yaExistia(quien, existente, peticion.retry);
 
 		/* La fila del comprador tiene que existir antes: el trabajo tiene una
 		   clave foránea hacia ella, y preparar un bordado es de las primeras
@@ -84,18 +134,36 @@ export class BordadoService {
 		   en cuanto escribías algo en ella. */
 		await this.perfil.asegurar(quien);
 
-		const claveEntrada = `inputs/${disenoHash}/${jobId}/design.json`;
+		/* SE GUARDA EL CANÓNICO, no `JSON.stringify`: el hash es el sha256 de esa
+		   serialización exacta y el worker lo vuelve a comprobar. El nombre dice
+		   qué es: `original.json` (V6.2) o `design.json` (cliente viejo). */
+		const claveEntrada = `inputs/${disenoHash}/${jobId}/${peticion.tipo === "original" ? "original" : "design"}.json`;
+		await this.almacen.guardarTexto(claveEntrada, entrada, "application/json");
+		if (peticion.tipo === "original" && peticion.pista !== null)
+			await this.almacen.guardarTexto(
+				`inputs/${disenoHash}/${jobId}/pista.json`,
+				canonicalJson(peticion.pista),
+				"application/json",
+			);
 
-		/* SE GUARDA EL CANÓNICO, no `JSON.stringify`. El `designHash` es el
-		   sha256 de esa serialización exacta —claves ordenadas, sin
-		   `undefined`— y el worker lo vuelve a comprobar antes de digitalizar:
-		   con cualquier otra forma, los bytes no cuadran y TODOS los trabajos
-		   mueren con `DESIGN_HASH_MISMATCH`. */
-		await this.almacen.guardarTexto(
-			claveEntrada,
-			canonicalJson(diseno),
-			"application/json",
-		);
+		const versiones =
+			peticion.tipo === "original"
+				? {
+						/* El perfil lo decide el original con la misma regla que usa el
+						   núcleo; no lo que diga el navegador. */
+						versionEsquema: EMBROIDERY_SCHEMA_VERSION,
+						versionPerfil: perfilDeFuentes(
+							aplicarPolitica(peticion.original, {
+								rasterVectorial: this.env.BORDADO_RASTER_VECTORIAL,
+							}).fuentes,
+						).version,
+						versionMotor: INKSTITCH_ENGINE_VERSION,
+					}
+				: {
+						versionEsquema: peticion.design.schemaVersion,
+						versionPerfil: peticion.design.profileVersion,
+						versionMotor: peticion.design.engineVersion,
+					};
 
 		/* `onConflictDoNothing` y no un insert a secas: dos peticiones a la vez
 		   calculan el MISMO id, y la segunda tiene que encontrarse la primera en
@@ -106,14 +174,12 @@ export class BordadoService {
 				id: jobId,
 				disenoHash,
 				compradorId: quien.sub,
-				productoId: diseno.productId,
-				lado: diseno.sideId,
+				productoId: area.productId,
+				lado: area.sideId,
 				estado: "QUEUED",
-				versionEsquema: diseno.schemaVersion,
-				versionPerfil: diseno.profileVersion,
-				versionMotor: diseno.engineVersion,
-				anchoMm: diseno.physical.widthMm,
-				altoMm: diseno.physical.heightMm,
+				...versiones,
+				anchoMm: area.widthMm,
+				altoMm: area.heightMm,
 				claveEntrada,
 			})
 			.onConflictDoNothing()
@@ -177,7 +243,14 @@ export class BordadoService {
 			   se leyó y ahora pudo entrar otro reintento. */
 			const [revivido] = await this.db
 				.update(e.trabajosDeBordado)
-				.set({ estado: "QUEUED", codigoError: null, actualizadoEn: new Date() })
+				/* Las etapas del intento fallido no son de este: el previsualizador
+				   empezaría enseñando lo de antes. */
+				.set({
+					estado: "QUEUED",
+					codigoError: null,
+					etapas: null,
+					actualizadoEn: new Date(),
+				})
 				.where(
 					and(
 						eq(e.trabajosDeBordado.id, existente.id),
@@ -204,11 +277,12 @@ export class BordadoService {
 		return this.aSalida(existente);
 	}
 
-	private validar(diseno: unknown): EmbroideryDesign {
+	private validar(cuerpo: unknown): PeticionDeBordado {
 		try {
-			validateDesign(diseno);
+			return leerPeticionDeBordado(cuerpo);
 		} catch (error) {
-			const codigo = error instanceof Error ? error.message : "INVALID_DESIGN";
+			const codigo =
+				error instanceof ErrorDeFrontera ? error.codigo : "INVALID_DESIGN";
 
 			/* UN MOTIVO QUE EL COMPRADOR PUEDA ACCIONAR cuando lo haya. "El diseño
 			   de bordado no es válido" no le dice a nadie qué hacer, y en el caso
@@ -224,14 +298,18 @@ export class BordadoService {
 					"Este diseño se preparó con una versión anterior; vuelve a prepararlo.",
 				PREPARATION_MISMATCH:
 					"Este diseño se preparó con una versión anterior; vuelve a prepararlo.",
+				ORIGINAL_VERSION_NO_SOPORTADA:
+					"Este diseño se preparó con una versión anterior; vuelve a prepararlo.",
+				RASTER_DEMASIADO_GRANDE:
+					"La imagen es demasiado grande para prepararla; usa una más pequeña.",
+				SVG_DEMASIADO_COMPLEJO:
+					"El SVG es demasiado complejo para bordarlo automáticamente.",
 			};
 
 			throw new BadRequestException(
 				motivos[codigo] ?? "El diseño de bordado no es válido",
 			);
 		}
-
-		return diseno as EmbroideryDesign;
 	}
 
 	/**
@@ -241,7 +319,12 @@ export class BordadoService {
 	 * tamaño del área decide cuánta puntada entra, y un diseño que declare un
 	 * área más chica de la real saldría preparado para un marco que no es.
 	 */
-	private async comprobarContraElProducto(diseno: EmbroideryDesign) {
+	private async comprobarContraElProducto(diseno: {
+		productId: string;
+		sideId: string;
+		widthMm: number;
+		heightMm: number;
+	}) {
 		const [producto] = await this.db
 			.select({ id: e.productos.id })
 			.from(e.productos)
@@ -279,8 +362,8 @@ export class BordadoService {
 		   `real` y el diseño trae milímetros, así que la conversión no da exacta
 		   y exigir igualdad rechazaría diseños buenos. */
 		if (
-			Math.abs(lado.anchoCm * 10 - diseno.physical.widthMm) > 0.05 ||
-			Math.abs(lado.altoCm * 10 - diseno.physical.heightMm) > 0.05
+			Math.abs(lado.anchoCm * 10 - diseno.widthMm) > 0.05 ||
+			Math.abs(lado.altoCm * 10 - diseno.heightMm) > 0.05
 		) {
 			throw new BadRequestException("Las medidas no coinciden con el producto");
 		}
@@ -308,7 +391,19 @@ export class BordadoService {
 		return {
 			jobId: t.id,
 			designHash: t.disenoHash,
-			status: t.estado,
+			/* V6.2: con un original, `designHash` ES el sha256 del original
+			   canónico: el editor lo compara con el que calculó él. */
+			originalHash: t.claveEntrada.endsWith("/original.json")
+				? t.disenoHash
+				: undefined,
+			/* V6.9.2: un diseño que el SERVIDOR rechazó es un rechazo, con su
+			   motivo, no un fallo: en la base es `FAILED` + `DESIGN_REJECTED`
+			   (el enum es del trabajo, no del diseño), pero el editor tiene que
+			   decir por qué no se puede bordar y no "no pudimos prepararlo". */
+			status:
+				t.estado === "FAILED" && t.codigoError === "DESIGN_REJECTED"
+					? ("REJECTED" as const)
+					: t.estado,
 			decision: t.decision ?? undefined,
 			confidence: t.confianza ?? undefined,
 			issues: t.incidencias ?? [],
@@ -319,6 +414,45 @@ export class BordadoService {
 				(t.estado === "READY" || t.estado === "REVIEW") && t.claveVista
 					? await this.almacen.urlParaLeer(t.claveVista)
 					: undefined,
+			stages: await this.etapasPublicas(t),
 		};
+	}
+
+	/**
+	 * V6.9.2: las etapas que el previsualizador ya puede enseñar, firmadas.
+	 * Las puntadas son PROVISIONALES mientras el trabajo sigue: validar y
+	 * reparar puede cambiarlas (casi nunca lo hace); al terminar bien, el
+	 * definitivo las reemplaza.
+	 */
+	private async etapasPublicas(t: typeof e.trabajosDeBordado.$inferSelect) {
+		const x = (t.etapas ?? {}) as {
+			forma?: { claves?: string[]; ms?: number };
+			colores?: string[];
+			puntadas?: { clave?: string; ms?: number };
+			final?: { clave?: string; ms?: number };
+		};
+		const enCurso = t.estado === "QUEUED" || t.estado === "PROCESSING";
+		const bien = t.estado === "READY" || t.estado === "REVIEW";
+		const etapas: EmbroideryStages = {};
+		if (x.forma?.claves?.length)
+			etapas.shape = {
+				urls: await Promise.all(
+					x.forma.claves.map((c) => this.almacen.urlParaLeer(c)),
+				),
+				ms: x.forma.ms ?? 0,
+			};
+		if (Array.isArray(x.colores)) etapas.colors = x.colores.map(String);
+		if (x.puntadas?.clave)
+			etapas.stitches = {
+				url: await this.almacen.urlParaLeer(x.puntadas.clave),
+				ms: x.puntadas.ms ?? 0,
+				provisional: enCurso,
+			};
+		if (bien && x.final?.clave)
+			etapas.final = {
+				url: await this.almacen.urlParaLeer(x.final.clave),
+				ms: x.final.ms ?? 0,
+			};
+		return Object.keys(etapas).length ? etapas : undefined;
 	}
 }

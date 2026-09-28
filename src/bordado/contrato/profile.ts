@@ -1,3 +1,5 @@
+// GENERADO de kustto-web/packages/bordado/src/profile.ts por scripts/bordado/exportar-nucleo.mts — NO EDITAR.
+// sha256 del contenido: a67d61c539394638b6a0138c810b982ac84bdb37d5426e458aa2933a1413ad5b
 /**
  * Los números con los que se decide qué se puede bordar y cómo.
  *
@@ -189,6 +191,28 @@ export type EmbroideryProfile = {
 		maxAdaptiveSpacingMm: number;
 		joinToleranceMm: number;
 	};
+	/**
+	 * La ruta vectorial (v5): texto y SVG se analizan sobre sus curvas, sin
+	 * rasterizar. Ausente en v1–v4.
+	 */
+	vector?: {
+		/** Error de cuerda al aplanar las curvas, en mm. */
+		toleranciaCuerdaMm: number;
+		/** Umbrales del eje cordal (ver `vector/ejeCordal.ts`). */
+		cordal: {
+			espuela: number;
+			tramoInterno: number;
+			desvioPasa: number;
+			giroSinInglete: number;
+			proporcionGrosor: number;
+			desvioPasaMaximo: number;
+			proporcionGrosorMaxima: number;
+		};
+		/** Distancia mínima entre rungs de una columna, en mm. */
+		separacionRungsMm: number;
+		/** Ángulo de las filas cuando una forma entera va de relleno. */
+		anguloRellenoGrados: number;
+	};
 };
 
 /** Hipótesis del spike. No sustituye una matriz de test-sew por tela/taller. */
@@ -356,7 +380,58 @@ export const EMBROIDERY_PROFILE_HYBRID_V4: EmbroideryProfile = Object.freeze({
 	},
 });
 
+/**
+ * v5 vectorial: el texto y los SVG dejan de rasterizarse.
+ *
+ * MISMAS PUNTADAS QUE V4 —densidad, compensación, anchos máximos— y OTRA
+ * GEOMETRÍA. Las letras se analizan sobre las curvas de la fuente y los rails
+ * del satin son el contorno de la letra; en v4 salían de un esqueleto de
+ * píxeles y en cada cruce se partían. Las imágenes siguen por la ruta raster
+ * de v4 hasta que tengan la suya.
+ *
+ * `preparar()` sigue en v4. Esto entra sólo por
+ * `prepararExperimentalVectorV5()`, que es lo que permite comparar las dos con
+ * el mismo diseño y volver atrás sin tocar nada más.
+ */
+export const EMBROIDERY_PROFILE_VECTOR_V5: EmbroideryProfile = Object.freeze({
+	...EMBROIDERY_PROFILE_HYBRID_V4,
+	version: "experimental-vector-v5-2026-09-25",
+	/* V6.9.0 — LOS TOPES DE V5 SON LOS DE LO QUE CUESTA COSERLO. Heredaba los de
+	   v2 (300 objetos, 320 componentes), que contaban formas enteras; v5 parte
+	   cada letra en sus columnas a propósito, así que el número crece con el
+	   tamaño del logo y no con lo difícil que es de bordar. El escudo de Harley a
+	   80 mm (233 objetos, 181 satins) se rechazaba por "demasiados detalles" y,
+	   cosido sin tope, sale en 51 s con 11 917 puntadas. Lo que de verdad
+	   limita es el tiempo del motor frente al del trabajo (180 s): medido en el
+	   banco de logos complejos, ~0.2 s por objeto en el peor caso (con
+	   reparación), así que 600 objetos quedan en ~120 s. Un satin por rails es
+	   UNA columna (ver `earlyAnalysis`). */
+	limits: {
+		...EMBROIDERY_PROFILE_HYBRID_V4.limits,
+		maxObjects: 600,
+		maxComponents: 800,
+		maxNodes: 80_000,
+	},
+	vector: {
+		// Diez veces menos que el grosor de un hilo: la curva de la fuente.
+		toleranciaCuerdaMm: 0.01,
+		cordal: {
+			espuela: 1,
+			tramoInterno: 0.6,
+			desvioPasa: 35,
+			giroSinInglete: 45,
+			proporcionGrosor: 1.45,
+			desvioPasaMaximo: 50,
+			proporcionGrosorMaxima: 1.9,
+		},
+		separacionRungsMm: 0.8,
+		anguloRellenoGrados: 45,
+	},
+});
+
 export function profileByVersion(version: string): EmbroideryProfile | null {
+	if (version === EMBROIDERY_PROFILE_VECTOR_V5.version)
+		return EMBROIDERY_PROFILE_VECTOR_V5;
 	if (version === EMBROIDERY_PROFILE_HYBRID_V4.version)
 		return EMBROIDERY_PROFILE_HYBRID_V4;
 	if (version === EMBROIDERY_PROFILE_V3.version) return EMBROIDERY_PROFILE_V3;

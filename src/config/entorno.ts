@@ -164,6 +164,27 @@ const esquema = z.object({
 	BORDADO_TIMEOUT_MS: z.coerce.number().default(180_000),
 	/** Cuántas digitalizaciones a la vez. Cada una se come una CPU entera. */
 	BORDADO_CONCURRENCIA: z.coerce.number().default(1),
+	/**
+	 * V6.2: el núcleo (la preparación autoritativa, generada desde kustto-web)
+	 * y con qué Node se corre. Va en un proceso aparte con su propio tope: es
+	 * CPU síncrona que no se interrumpe desde dentro.
+	 */
+	BORDADO_NUCLEO: z.string().default("/app/servicios/bordado/nucleo.cjs"),
+	BORDADO_NODE: z.string().default(process.execPath),
+	BORDADO_NUCLEO_TIMEOUT_MS: z.coerce.number().default(120_000),
+	/**
+	 * Cuánto puede pesar el cuerpo de `POST /bordados/jobs`: el original de una
+	 * imagen son sus píxeles (comprimidos). Sólo esa ruta; el resto sigue con
+	 * el tope por defecto.
+	 */
+	BORDADO_MAXIMO_CUERPO_BYTES: z.coerce.number().default(16_000_000),
+	/**
+	 * V6.2: por qué ruta va una imagen (v5 vectorial, con verdad estructural,
+	 * o v4 por píxeles). La decide el SERVIDOR: si la decidiera el navegador,
+	 * mandar la misma imagen por la ruta que no se comprueba sería cuestión de
+	 * cambiar un booleano del cuerpo.
+	 */
+	BORDADO_RASTER_VECTORIAL: interruptor(true),
 
 	/* ─── Quitar fondo ────────────────────────────────────────────────────
 	   Una Lambda con ISNet que lee de SU PROPIO bucket y la despierta SU

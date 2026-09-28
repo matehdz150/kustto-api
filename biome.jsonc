@@ -9,7 +9,22 @@
 	"files": {
 		"ignoreUnknown": true,
 		// Las instantáneas de drizzle-kit las escribe la herramienta, no nosotros.
-		"includes": ["**", "!migraciones/meta"]
+		// Tampoco lo que genera kustto-web (V6.2): el contrato y el núcleo de
+		// bordado se copian byte a byte, y `contrato.spec.ts` comprueba su sha256;
+		// formatearlos aquí los haría distintos del paquete.
+		"includes": [
+			"**",
+			"!migraciones/meta",
+			"!src/bordado/contrato/canonical.ts",
+			"!src/bordado/contrato/profile.ts",
+			"!src/bordado/contrato/types.ts",
+			"!src/bordado/contrato/validation.ts",
+			"!src/bordado/contrato/original.ts",
+			"!src/bordado/contrato/nucleo.ts",
+			"!servicios/bordado/nucleo.cjs",
+			"!servicios/bordado/nucleo.version.json",
+			"!src/bordado/pruebas"
+		]
 	},
 	"formatter": {
 		"enabled": true,

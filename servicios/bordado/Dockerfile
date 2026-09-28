@@ -65,6 +65,16 @@ RUN pnpm install --frozen-lockfile --prod
 COPY --from=construccion /app/dist ./dist
 COPY migraciones ./migraciones
 COPY servicios/bordado/motor.py servicios/bordado/quality.py ./servicios/bordado/
+# V6.3–V6.4.1: los módulos que `motor.py` importa (identidad exacta, validador de
+# técnica, reparación). Sin ellos la imagen arranca y el motor muere al importar.
+COPY servicios/bordado/identidad.py servicios/bordado/tecnica.py servicios/bordado/reparacion.py ./servicios/bordado/
+# V6.4.3: la cobertura exacta (la importan motor.py y reparacion.py). V6.7.0: el
+# reparto de puntadas de los corridos finos (lo importa motor.py).
+COPY servicios/bordado/cobertura.py servicios/bordado/puntadas.py ./servicios/bordado/
+# V6.2: el núcleo de la preparación (generado desde kustto-web por
+# `pnpm bordado:exportar-nucleo`). El worker lo corre con el mismo Node de la
+# imagen para preparar el ORIGINAL en el servidor: es quien decide.
+COPY servicios/bordado/nucleo.cjs servicios/bordado/nucleo.version.json ./servicios/bordado/
 
 # Ink/Stitch quiere un display aunque no dibuje nada en pantalla. El motor
 # levanta el Xvfb solo la primera vez que lo necesita.

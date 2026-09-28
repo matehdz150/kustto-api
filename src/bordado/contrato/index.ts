@@ -1,23 +1,24 @@
 /**
- * EL CONTRATO DE BORDADO, copiado de `@kustto/bordado` (que vive en
- * kustto-web).
+ * EL CONTRATO DE BORDADO, GENERADO desde `@kustto/bordado` (kustto-web).
  *
- * Es el mismo trato a los dos lados de la frontera: el navegador PREPARA el
- * diseño con estas reglas y esta API lo VALIDA con las mismas. Si divergen, el
- * editor manda algo que aquí se rechaza —o peor, algo que se acepta y el motor
- * no sabe coser.
+ * Es el mismo trato a los dos lados de la frontera: el navegador prepara una
+ * vista previa con estas reglas y esta API valida con las mismas.
  *
- * SE COPIA SÓLO LO QUE LA API NECESITA: el contrato (tipos, perfil, hash
- * canónico y validación). El resto del paquete —la geometría, el satín, la
- * planificación de puntada— son 3.200 líneas que sólo corren en el navegador
- * al preparar, y traerlas aquí sería arrastrar un motor que esta API no usa.
+ * V6.2: YA NO ES UNA COPIA A MANO. `canonical`, `profile`, `types`,
+ * `validation` y `original` los escribe
+ * `kustto-web/scripts/bordado/exportar-nucleo.mts` byte a byte, con una
+ * cabecera que lleva su sha256; `contrato.spec.ts` falla si alguien los edita
+ * aquí. Para cambiarlos se cambia el paquete y se vuelve a generar. La copia
+ * manual se había desfasado (le faltaban `estructura`, `beanRepeats` y
+ * `verdad`) sin que nada lo dijera.
  *
- * ES UNA COPIA Y NO UN IMPORT porque web y api son dos repos. Igual que
- * `src/precios`: aceptado a propósito y con fecha de caducidad. SI TOCAS UNA,
- * TOCA LA OTRA — y aquí importa más que en precios, porque el `designHash` se
- * calcula en los dos lados y tiene que dar lo mismo.
+ * `nucleo` es la versión del núcleo empaquetado en
+ * `servicios/bordado/nucleo.cjs`: la única implementación de la preparación
+ * (la misma que corre en el navegador), y la que decide aquí.
  */
 export * from "./canonical";
+export * from "./nucleo";
+export * from "./original";
 export * from "./profile";
 export * from "./types";
 export * from "./validation";

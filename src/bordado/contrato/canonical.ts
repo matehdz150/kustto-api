@@ -1,3 +1,5 @@
+// GENERADO de kustto-web/packages/bordado/src/canonical.ts por scripts/bordado/exportar-nucleo.mts — NO EDITAR.
+// sha256 del contenido: 47f74d04acdf6068fc4918722d31fdceba5700b96f5dd2d54ffdf74a5e842fec
 import type { EmbroideryDesign } from "./types";
 
 function normalizarNumero(value: number): number {

@@ -1,3 +1,4 @@
+import { createRequire } from "node:module";
 import { Logger, ValidationPipe } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import type { NestExpressApplication } from "@nestjs/platform-express";
@@ -48,6 +49,19 @@ async function arrancar() {
 	 * quien lo visita.
 	 */
 	app.enableCors({ origin: origenes, credentials: true });
+
+	/**
+	 * V6.2: EL ORIGINAL DE UN BORDADO PESA MÁS que el tope general de 100 kB
+	 * (una imagen viaja con sus píxeles comprimidos). Se sube SÓLO en esa
+	 * ruta: el parser que se registra aquí corre antes que el general de
+	 * Nest, deja el cuerpo parseado, y el general ya no lo vuelve a leer. El
+	 * resto de la API sigue con su tope.
+	 */
+	/* La MISMA express que usa Nest (no es dependencia directa de la API). */
+	const { json } = createRequire(
+		require.resolve("@nestjs/platform-express/package.json"),
+	)("express") as typeof import("express");
+	app.use("/bordados/jobs", json({ limit: env.BORDADO_MAXIMO_CUERPO_BYTES }));
 
 	/* Las cookies de sesión (`kustto_acceso_*`, `kustto_renovacion_*`). */
 	app.use(cookieParser());

@@ -1,3 +1,5 @@
+// GENERADO de kustto-web/packages/bordado/src/validation.ts por scripts/bordado/exportar-nucleo.mts — NO EDITAR.
+// sha256 del contenido: 48cbbfabf3cb2742022d9b2afcf5049840dfbacf4fc66e263a634d0b427175ed
 import { type EmbroideryProfile, profileByVersion } from "./profile";
 import {
 	EMBROIDERY_SCHEMA_VERSION,
@@ -111,6 +113,25 @@ export function validateDesign(
 				object.stitch.maxStitchLengthMm > 12)
 		)
 			throw new Error("INVALID_STITCH_LENGTH");
+		if (
+			object.stitch.beanRepeats !== undefined &&
+			(object.stitch.type !== "running" ||
+				![0, 1, 2].includes(object.stitch.beanRepeats))
+		)
+			throw new Error("INVALID_STITCH_PARAMETER");
+		if (
+			object.stitch.toleranceMm !== undefined &&
+			(object.stitch.type !== "running" ||
+				!Number.isFinite(object.stitch.toleranceMm) ||
+				object.stitch.toleranceMm < 0.02 ||
+				object.stitch.toleranceMm > 1)
+		)
+			throw new Error("INVALID_STITCH_PARAMETER");
+		if (
+			object.stitch.placement !== undefined &&
+			(object.stitch.type !== "running" || object.stitch.placement !== "curvatura")
+		)
+			throw new Error("INVALID_STITCH_PARAMETER");
 		if (!Number.isInteger(object.nodeCount) || object.nodeCount < 1)
 			throw new Error("INVALID_NODE_COUNT");
 	}
@@ -127,10 +148,16 @@ export function earlyAnalysis(
 	const issues: EmbroideryIssue[] = [];
 	const m = design.metrics;
 	const nodes = design.objects.reduce((sum, item) => sum + item.nodeCount, 0);
-	const components = design.objects.reduce(
-		(sum, item) => sum + (item.geometry.d.match(/[Mm]/g)?.length ?? 0),
-		0,
-	);
+	/* EN V5 UN RUNG NO ES UN COMPONENTE. Un satin por rails lleva sus dos
+	   rails y un subtrazado por rung, y contarlos todos rechazaba por
+	   "demasiados detalles" un escudo de 18 objetos: 396 subtrazados, 367 de
+	   ellos rungs. Los perfiles anteriores cuentan como siempre. */
+	/* V6.9.0: y un satin por rails es UNA columna, una unidad de cosido (no
+	   sus dos rails): contarlo doble rechazaba el escudo de Harley. */
+	const components = design.objects.reduce((sum, item) => {
+		if (profile.vector && item.stitch.satinMode === "rails") return sum + 1;
+		return sum + (item.geometry.d.match(/[Mm]/g)?.length ?? 0);
+	}, 0);
 	if (design.objects.some((object) => object.classification === "photo"))
 		issues.push({
 			code: "PHOTO",
