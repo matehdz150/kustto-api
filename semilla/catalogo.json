@@ -4,7 +4,9 @@
 			"id": "cap",
 			"nombre": "Basic Cap",
 			"datos": {
-				"sides": ["front"],
+				"sides": [
+					"front"
+				],
 				"mockups": {
 					"front": "/mockups/cap/front-9779e7d6782e.png"
 				},
@@ -26,11 +28,54 @@
 			}
 		},
 		{
+			"id": "hoodie-01",
+			"nombre": "Hoodie-01",
+			"datos": {
+				"forma": "plano",
+				"sides": [
+					"front",
+					"back"
+				],
+				"mockups": {
+					"back": "/mockups/Hoodie-01/back-0f55f661d94d.png",
+					"front": "/mockups/Hoodie-01/front-7f254167dbbe.png"
+				},
+				"sideLabels": {
+					"back": "Detras",
+					"front": "Delante"
+				},
+				"editableAreas": {
+					"back": [
+						{
+							"id": "back-main",
+							"top": 299,
+							"left": 612,
+							"type": "rect",
+							"width": 223,
+							"height": 197
+						}
+					],
+					"front": [
+						{
+							"id": "front-main",
+							"top": 307,
+							"left": 607,
+							"type": "rect",
+							"width": 228,
+							"height": 194
+						}
+					]
+				}
+			}
+		},
+		{
 			"id": "mochila-01",
 			"nombre": "Mochila",
 			"datos": {
 				"forma": "plano",
-				"sides": ["front"],
+				"sides": [
+					"front"
+				],
 				"mockups": {
 					"front": "/mockups/mochila-01/front-8235a97e1f85.png"
 				},
@@ -52,11 +97,41 @@
 			}
 		},
 		{
+			"id": "pencil-01",
+			"nombre": "Pencil-01",
+			"datos": {
+				"forma": "plano",
+				"sides": [
+					"front"
+				],
+				"mockups": {
+					"front": "/mockups/pencil-01/front-5fc83390ad9f.png"
+				},
+				"sideLabels": {
+					"front": "Delante"
+				},
+				"editableAreas": {
+					"front": [
+						{
+							"id": "front-main",
+							"top": 189,
+							"left": 701,
+							"type": "rect",
+							"width": 47,
+							"height": 284
+						}
+					]
+				}
+			}
+		},
+		{
 			"id": "taza-01",
 			"nombre": "Taza",
 			"datos": {
 				"forma": "cilindro",
-				"sides": ["wrap"],
+				"sides": [
+					"wrap"
+				],
 				"mockups": {
 					"wrap": "/mockups/taza-01/wrap-40b2945b6737.png"
 				},
@@ -82,7 +157,9 @@
 			"nombre": "Termo-01",
 			"datos": {
 				"forma": "cilindro",
-				"sides": ["wrap"],
+				"sides": [
+					"wrap"
+				],
 				"mockups": {
 					"wrap": "/mockups/termo-01/wrap-3ec8f58e324c.png"
 				},
@@ -108,7 +185,9 @@
 			"nombre": "Termo",
 			"datos": {
 				"forma": "cilindro",
-				"sides": ["wrap"],
+				"sides": [
+					"wrap"
+				],
 				"mockups": {
 					"wrap": "/mockups/Termo-02/wrap-5cf0691256c8.png"
 				},
@@ -134,7 +213,12 @@
 			"nombre": "Basic T-Shirt",
 			"datos": {
 				"forma": "plano",
-				"sides": ["front", "back", "rightmanga", "leftmanga"],
+				"sides": [
+					"front",
+					"back",
+					"rightmanga",
+					"leftmanga"
+				],
 				"mockups": {
 					"back": "/mockups/tshirt/back-0eb3ba6c9ad0.png",
 					"front": "/mockups/tshirt/front-8cdcbb1aa538.png",
@@ -194,49 +278,289 @@
 	],
 	"categorias": [
 		{
-			"id": "0310f8bc-b39d-4852-806d-b9fb8e7e0796",
-			"nombre": "Playeras",
-			"slug": "playeras",
-			"descripcion": "Cuello redondo, oversize y manga larga.",
-			"imagenUrl": "/products/tshirt.png",
-			"orden": 0
+			"id": "77e063ec-3651-4193-8088-b83da6408835",
+			"nombre": "Eventos",
+			"slug": "eventos",
+			"descripcion": null,
+			"imagenUrl": null,
+			"orden": 1,
+			"color": "#a8505f"
 		},
 		{
-			"id": "11826730-743d-4247-beaa-ef4e588b7251",
-			"nombre": "Tazas",
-			"slug": "tazas",
+			"id": "899dbc9f-c10b-47db-b5e3-66374dcf5dfb",
+			"nombre": "Ropa",
+			"slug": "ropa",
 			"descripcion": null,
-			"imagenUrl": "/medios/categorias/ca2b6218817cf881.png",
+			"imagenUrl": null,
+			"orden": 2,
+			"color": "#a0a5ae"
+		},
+		{
+			"id": "ee745c79-8c3d-4cda-b52c-c30184f97ad0",
+			"nombre": "Hogar",
+			"slug": "hogar",
+			"descripcion": null,
+			"imagenUrl": null,
+			"orden": 3,
+			"color": "#2c4a8c"
+		},
+		{
+			"id": "ec78b129-befd-4c36-928d-bf9d80a79a5b",
+			"nombre": "Accesorios",
+			"slug": "accesorios",
+			"descripcion": null,
+			"imagenUrl": null,
+			"orden": 4,
+			"color": "#bd6a2d"
+		},
+		{
+			"id": "8c91de9a-1f75-481d-b5d0-ebf64cd5a7db",
+			"nombre": "Bodas",
+			"slug": "bodas",
+			"descripcion": null,
+			"imagenUrl": null,
+			"orden": 5,
+			"color": "#a3b59b"
+		},
+		{
+			"id": "db0eea01-f0b3-420c-bd68-64d3bb727b0e",
+			"nombre": "Equipos y empresas",
+			"slug": "equipos",
+			"descripcion": null,
+			"imagenUrl": null,
+			"orden": 6,
+			"color": "#97a59d"
+		},
+		{
+			"id": "07684675-586e-4cc0-9c72-ae1901586666",
+			"nombre": "Invierno",
+			"slug": "invierno",
+			"descripcion": null,
+			"imagenUrl": null,
+			"orden": 7,
+			"color": "#5f5499"
+		},
+		{
+			"id": "7d9e8c0d-c9fa-4766-97a6-30d51fa4a42a",
+			"nombre": "Papelería",
+			"slug": "papeleria",
+			"descripcion": null,
+			"imagenUrl": null,
+			"orden": 8,
+			"color": "#a33a3a"
+		},
+		{
+			"id": "b0760e80-a56f-4fb8-8a98-ba644abd70a8",
+			"nombre": "Regalos",
+			"slug": "regalos",
+			"descripcion": null,
+			"imagenUrl": null,
+			"orden": 9,
+			"color": "#2f6a3f"
+		},
+		{
+			"id": "aee0d3eb-29ca-490a-8f05-1181b19b888c",
+			"nombre": "Bolsas y viaje",
+			"slug": "bolsas",
+			"descripcion": null,
+			"imagenUrl": null,
+			"orden": 10,
+			"color": "#a07a73"
+		}
+	],
+	"tipos": [
+		{
+			"id": "7dddc867-15d8-4112-860d-b149ee7855ab",
+			"nombre": "Termos",
+			"slug": "termos",
+			"titulo": null,
 			"orden": 1
 		},
 		{
-			"id": "2710f70c-7435-40e4-a109-e2503488b55d",
-			"nombre": "Mochilas",
-			"slug": "mochilas",
-			"descripcion": null,
-			"imagenUrl": "/medios/categorias/8438856e4e7901c6.png",
+			"id": "2e7cd571-88aa-46f0-83e7-00279b9e13a2",
+			"nombre": "Playeras",
+			"slug": "playeras",
+			"titulo": null,
 			"orden": 2
 		},
 		{
-			"id": "4cb6cbbd-6eaa-4dd6-b4ee-286eebc5dc2e",
-			"nombre": "Termos",
-			"slug": "termos",
-			"descripcion": null,
-			"imagenUrl": "/medios/categorias/0d1f26fa52f741a5.png",
+			"id": "c965d2ca-5055-413f-af49-7fc659d8d5d0",
+			"nombre": "Sudaderas",
+			"slug": "sudaderas",
+			"titulo": null,
 			"orden": 3
 		},
 		{
-			"id": "881994ff-b0c9-4270-a841-4a856825938a",
+			"id": "e37987c8-f35c-4ade-bd61-a20e001411b7",
+			"nombre": "Totes",
+			"slug": "totes",
+			"titulo": null,
+			"orden": 4
+		},
+		{
+			"id": "c7fb4b6c-0566-41cd-a20e-5863e3f8ec41",
+			"nombre": "Tazas",
+			"slug": "tazas",
+			"titulo": null,
+			"orden": 5
+		},
+		{
+			"id": "981de496-3d33-4daf-9d1a-586075abb4b9",
+			"nombre": "Botellas",
+			"slug": "botellas",
+			"titulo": null,
+			"orden": 6
+		},
+		{
+			"id": "b64190f8-4fd3-418f-83d2-13f5068665d9",
 			"nombre": "Gorras",
 			"slug": "gorras",
-			"descripcion": null,
-			"imagenUrl": "/medios/categorias/306e64af03b75d26.jpg",
-			"orden": 4
+			"titulo": null,
+			"orden": 7
+		},
+		{
+			"id": "bd2afb9d-f622-4fc4-b040-e5c48a6ed114",
+			"nombre": "Lisas",
+			"slug": "lisas",
+			"titulo": "Playeras lisas",
+			"orden": 8
+		},
+		{
+			"id": "d0d3aa0a-6ea7-487c-aca6-100f3e660a68",
+			"nombre": "Gorros",
+			"slug": "gorros",
+			"titulo": null,
+			"orden": 9
+		},
+		{
+			"id": "9e7bfcc2-c7ad-405a-968f-3c1cdd74f5f9",
+			"nombre": "Mandiles",
+			"slug": "mandiles",
+			"titulo": null,
+			"orden": 10
+		},
+		{
+			"id": "b51927f2-81ba-4f72-9ee0-ace42d963809",
+			"nombre": "Uniformes",
+			"slug": "uniformes",
+			"titulo": null,
+			"orden": 11
+		},
+		{
+			"id": "0411ae16-1aa7-4da9-a90e-39230bfc8b24",
+			"nombre": "Peltre",
+			"slug": "peltre",
+			"titulo": "Tazas de peltre",
+			"orden": 12
+		},
+		{
+			"id": "540ec186-e1cb-478f-a126-12c6c359f781",
+			"nombre": "Cojines",
+			"slug": "cojines",
+			"titulo": null,
+			"orden": 13
+		},
+		{
+			"id": "867ab815-da4c-4e02-8395-4662e25609f5",
+			"nombre": "Velas",
+			"slug": "velas",
+			"titulo": null,
+			"orden": 14
+		},
+		{
+			"id": "e120aa20-929e-4a26-9d03-86634dd57902",
+			"nombre": "Decorativas",
+			"slug": "decorativas",
+			"titulo": "Velas decorativas",
+			"orden": 15
+		},
+		{
+			"id": "4e10912c-da22-430a-803b-72a10a1fa8a0",
+			"nombre": "Vasos",
+			"slug": "vasos",
+			"titulo": "Vasos térmicos",
+			"orden": 16
+		},
+		{
+			"id": "6c3bdd1a-cd7b-425d-8a51-dbe370b9e935",
+			"nombre": "Fundas",
+			"slug": "fundas",
+			"titulo": null,
+			"orden": 17
+		},
+		{
+			"id": "bfd4e0c6-17e6-457f-8fad-1aa083a30c3b",
+			"nombre": "Mochilas",
+			"slug": "mochilas",
+			"titulo": null,
+			"orden": 18
+		},
+		{
+			"id": "a0718c9c-c5ce-4646-b4bf-91a79a18b23b",
+			"nombre": "Cajitas",
+			"slug": "cajitas",
+			"titulo": "Cajitas de recuerdo",
+			"orden": 19
+		},
+		{
+			"id": "43b28de2-8936-4e76-a7af-17f428b5543d",
+			"nombre": "Lavanda",
+			"slug": "lavanda",
+			"titulo": "Velas de lavanda",
+			"orden": 20
+		},
+		{
+			"id": "3a6f5f69-d08a-4da9-bab5-27b498ce9446",
+			"nombre": "Libretas",
+			"slug": "libretas",
+			"titulo": null,
+			"orden": 21
+		},
+		{
+			"id": "6bf6810d-f2bb-4898-b4cc-536d6c4c2030",
+			"nombre": "Generación",
+			"slug": "generacion",
+			"titulo": "Sudaderas de generación",
+			"orden": 22
+		},
+		{
+			"id": "ef5d714c-0e18-4e53-9b45-c814f3538336",
+			"nombre": "Cuadernos",
+			"slug": "cuadernos",
+			"titulo": null,
+			"orden": 23
+		},
+		{
+			"id": "2aeab608-e9c6-4fa6-96a1-27f70062fa55",
+			"nombre": "De manta",
+			"slug": "de-manta",
+			"titulo": "Totes de manta",
+			"orden": 24
+		},
+		{
+			"id": "0522fe48-091d-42fc-89a1-beb90d70a7b0",
+			"nombre": "Plumas",
+			"slug": "plumas",
+			"titulo": null,
+			"orden": 25
+		}
+	],
+	"talleres": [
+		{
+			"id": "7458f4e8-6051-70af-cab2-e666d2fa2b4b",
+			"nombre": "Mega Impresiones GDL",
+			"slug": "mega-impresiones-gdl",
+			"nombre_publico": "Mega Impresiones GDL",
+			"bio": "Hola",
+			"avatar_url": null,
+			"banner_url": null
 		}
 	],
 	"productos": [
 		{
 			"id": "e14c57a4-4c49-459f-b1a7-b2c3eb0dc979",
+			"taller_id": "7458f4e8-6051-70af-cab2-e666d2fa2b4b",
+			"tipo_id": "2e7cd571-88aa-46f0-83e7-00279b9e13a2",
 			"nombre": "Playera de cuello redondo",
 			"nombre_interno": "Playera de cuello redondo",
 			"sku": "PLY-01",
@@ -256,16 +580,23 @@
 				"allowText": true,
 				"allowImages": true
 			},
-			"lados_de_plantilla": ["front", "back", "leftmanga", "rightmanga"],
+			"lados_de_plantilla": [
+				"front",
+				"back",
+				"leftmanga",
+				"rightmanga"
+			],
 			"nota_revision": null,
 			"imagenes": [
 				{
 					"url": "/medios/productos/7458f4e8-6051-70af-cab2-e666d2fa2b4b/6696c8c099fa9d12.png",
-					"orden": 0
+					"orden": 0,
+					"tipo": "foto"
 				},
 				{
 					"url": "/medios/productos/7458f4e8-6051-70af-cab2-e666d2fa2b4b/254f49eb19797ea9.png",
-					"orden": 1
+					"orden": 1,
+					"tipo": "foto"
 				}
 			],
 			"colores": [
@@ -334,7 +665,8 @@
 			],
 			"precio": {
 				"precio_base": "200.00",
-				"precio_por_lado": null
+				"precio_por_lado": null,
+				"precio_antes": null
 			},
 			"produccion": {
 				"dias": 15,
@@ -479,10 +811,17 @@
 					"orden": 4
 				}
 			],
-			"categorias": ["0310f8bc-b39d-4852-806d-b9fb8e7e0796"]
+			"categorias": [
+				"b0760e80-a56f-4fb8-8a98-ba644abd70a8",
+				"db0eea01-f0b3-420c-bd68-64d3bb727b0e",
+				"899dbc9f-c10b-47db-b5e3-66374dcf5dfb",
+				"77e063ec-3651-4193-8088-b83da6408835"
+			]
 		},
 		{
 			"id": "fef3cb1d-5c43-49cf-b5ad-6dfc3209fe9c",
+			"taller_id": "7458f4e8-6051-70af-cab2-e666d2fa2b4b",
+			"tipo_id": "b64190f8-4fd3-418f-83d2-13f5068665d9",
 			"nombre": "Gorra de algodon",
 			"nombre_interno": "Gorra de algodon",
 			"sku": "GR-01",
@@ -502,16 +841,20 @@
 				"allowText": true,
 				"allowImages": true
 			},
-			"lados_de_plantilla": ["front"],
+			"lados_de_plantilla": [
+				"front"
+			],
 			"nota_revision": null,
 			"imagenes": [
 				{
 					"url": "/medios/productos/7458f4e8-6051-70af-cab2-e666d2fa2b4b/49684b464bb37223.png",
-					"orden": 0
+					"orden": 0,
+					"tipo": "foto"
 				},
 				{
 					"url": "/medios/productos/7458f4e8-6051-70af-cab2-e666d2fa2b4b/04d311ff7d5975d5.png",
-					"orden": 1
+					"orden": 1,
+					"tipo": "foto"
 				}
 			],
 			"colores": [
@@ -543,7 +886,8 @@
 			],
 			"precio": {
 				"precio_base": "150.00",
-				"precio_por_lado": null
+				"precio_por_lado": null,
+				"precio_antes": null
 			},
 			"produccion": {
 				"dias": 10,
@@ -633,10 +977,18 @@
 					"orden": 2
 				}
 			],
-			"categorias": ["881994ff-b0c9-4270-a841-4a856825938a"]
+			"categorias": [
+				"aee0d3eb-29ca-490a-8f05-1181b19b888c",
+				"db0eea01-f0b3-420c-bd68-64d3bb727b0e",
+				"ec78b129-befd-4c36-928d-bf9d80a79a5b",
+				"899dbc9f-c10b-47db-b5e3-66374dcf5dfb",
+				"77e063ec-3651-4193-8088-b83da6408835"
+			]
 		},
 		{
 			"id": "dc4be280-e6a1-4be0-b13d-a2862f05a717",
+			"taller_id": "7458f4e8-6051-70af-cab2-e666d2fa2b4b",
+			"tipo_id": "c7fb4b6c-0566-41cd-a20e-5863e3f8ec41",
 			"nombre": "Taza de ceramica",
 			"nombre_interno": "Taza de ceramica",
 			"sku": "Taz01",
@@ -656,16 +1008,20 @@
 				"allowText": true,
 				"allowImages": true
 			},
-			"lados_de_plantilla": ["wrap"],
+			"lados_de_plantilla": [
+				"wrap"
+			],
 			"nota_revision": null,
 			"imagenes": [
 				{
 					"url": "/medios/productos/7458f4e8-6051-70af-cab2-e666d2fa2b4b/e0d86e20d1e1c065.png",
-					"orden": 0
+					"orden": 0,
+					"tipo": "foto"
 				},
 				{
 					"url": "/medios/productos/7458f4e8-6051-70af-cab2-e666d2fa2b4b/bd8c8ac74a522c95.png",
-					"orden": 1
+					"orden": 1,
+					"tipo": "foto"
 				}
 			],
 			"colores": [
@@ -697,7 +1053,8 @@
 			],
 			"precio": {
 				"precio_base": "250.00",
-				"precio_por_lado": null
+				"precio_por_lado": null,
+				"precio_antes": null
 			},
 			"produccion": {
 				"dias": 10,
@@ -757,10 +1114,19 @@
 					"orden": 2
 				}
 			],
-			"categorias": ["11826730-743d-4247-beaa-ef4e588b7251"]
+			"categorias": [
+				"b0760e80-a56f-4fb8-8a98-ba644abd70a8",
+				"7d9e8c0d-c9fa-4766-97a6-30d51fa4a42a",
+				"07684675-586e-4cc0-9c72-ae1901586666",
+				"8c91de9a-1f75-481d-b5d0-ebf64cd5a7db",
+				"ee745c79-8c3d-4cda-b52c-c30184f97ad0",
+				"77e063ec-3651-4193-8088-b83da6408835"
+			]
 		},
 		{
 			"id": "0efb089a-914a-433b-a253-d758ed91d472",
+			"taller_id": "7458f4e8-6051-70af-cab2-e666d2fa2b4b",
+			"tipo_id": "7dddc867-15d8-4112-860d-b149ee7855ab",
 			"nombre": "Termo de metal",
 			"nombre_interno": "Termo de metal",
 			"sku": "TRM-01",
@@ -780,16 +1146,20 @@
 				"allowText": true,
 				"allowImages": true
 			},
-			"lados_de_plantilla": ["wrap"],
+			"lados_de_plantilla": [
+				"wrap"
+			],
 			"nota_revision": null,
 			"imagenes": [
 				{
 					"url": "/medios/productos/7458f4e8-6051-70af-cab2-e666d2fa2b4b/8341ebe1ecc33673.png",
-					"orden": 0
+					"orden": 0,
+					"tipo": "foto"
 				},
 				{
 					"url": "/medios/productos/7458f4e8-6051-70af-cab2-e666d2fa2b4b/49592965f0113471.png",
-					"orden": 1
+					"orden": 1,
+					"tipo": "foto"
 				}
 			],
 			"colores": [
@@ -821,7 +1191,8 @@
 			],
 			"precio": {
 				"precio_base": "300.00",
-				"precio_por_lado": null
+				"precio_por_lado": null,
+				"precio_antes": null
 			},
 			"produccion": {
 				"dias": 10,
@@ -851,10 +1222,17 @@
 					"orden": 0
 				}
 			],
-			"categorias": ["4cb6cbbd-6eaa-4dd6-b4ee-286eebc5dc2e"]
+			"categorias": [
+				"aee0d3eb-29ca-490a-8f05-1181b19b888c",
+				"07684675-586e-4cc0-9c72-ae1901586666",
+				"ec78b129-befd-4c36-928d-bf9d80a79a5b",
+				"77e063ec-3651-4193-8088-b83da6408835"
+			]
 		},
 		{
 			"id": "a031b52d-1b2f-4ba7-9286-983eab4cccfb",
+			"taller_id": "7458f4e8-6051-70af-cab2-e666d2fa2b4b",
+			"tipo_id": "bfd4e0c6-17e6-457f-8fad-1aa083a30c3b",
 			"nombre": "Mochila de tela",
 			"nombre_interno": "Mochila de tela",
 			"sku": "MC-01",
@@ -874,16 +1252,20 @@
 				"allowText": true,
 				"allowImages": true
 			},
-			"lados_de_plantilla": ["front"],
+			"lados_de_plantilla": [
+				"front"
+			],
 			"nota_revision": null,
 			"imagenes": [
 				{
 					"url": "/medios/productos/7458f4e8-6051-70af-cab2-e666d2fa2b4b/679d5310b71389a9.png",
-					"orden": 0
+					"orden": 0,
+					"tipo": "foto"
 				},
 				{
 					"url": "/medios/productos/7458f4e8-6051-70af-cab2-e666d2fa2b4b/1427d5f2cb890ab7.png",
-					"orden": 1
+					"orden": 1,
+					"tipo": "foto"
 				}
 			],
 			"colores": [
@@ -923,7 +1305,8 @@
 			],
 			"precio": {
 				"precio_base": "400.00",
-				"precio_por_lado": null
+				"precio_por_lado": null,
+				"precio_antes": null
 			},
 			"produccion": {
 				"dias": 20,
@@ -1023,10 +1406,16 @@
 					"orden": 2
 				}
 			],
-			"categorias": ["2710f70c-7435-40e4-a109-e2503488b55d"]
+			"categorias": [
+				"aee0d3eb-29ca-490a-8f05-1181b19b888c",
+				"db0eea01-f0b3-420c-bd68-64d3bb727b0e",
+				"ec78b129-befd-4c36-928d-bf9d80a79a5b"
+			]
 		},
 		{
 			"id": "c6d58549-7a8b-45f4-b15c-0e7a046ababe",
+			"taller_id": "7458f4e8-6051-70af-cab2-e666d2fa2b4b",
+			"tipo_id": "7dddc867-15d8-4112-860d-b149ee7855ab",
 			"nombre": "Termo negro",
 			"nombre_interno": "Termo negro",
 			"sku": "TRM-02",
@@ -1046,16 +1435,20 @@
 				"allowText": true,
 				"allowImages": true
 			},
-			"lados_de_plantilla": ["wrap"],
+			"lados_de_plantilla": [
+				"wrap"
+			],
 			"nota_revision": null,
 			"imagenes": [
 				{
 					"url": "/medios/productos/7458f4e8-6051-70af-cab2-e666d2fa2b4b/41e7795e0feafafc.png",
-					"orden": 0
+					"orden": 0,
+					"tipo": "foto"
 				},
 				{
 					"url": "/medios/productos/7458f4e8-6051-70af-cab2-e666d2fa2b4b/c23b3ebfbe8bf129.png",
-					"orden": 1
+					"orden": 1,
+					"tipo": "foto"
 				}
 			],
 			"colores": [
@@ -1087,7 +1480,8 @@
 			],
 			"precio": {
 				"precio_base": "370.00",
-				"precio_por_lado": null
+				"precio_por_lado": null,
+				"precio_antes": null
 			},
 			"produccion": {
 				"dias": 20,
@@ -1147,266 +1541,522 @@
 					"orden": 2
 				}
 			],
-			"categorias": ["4cb6cbbd-6eaa-4dd6-b4ee-286eebc5dc2e"]
+			"categorias": [
+				"aee0d3eb-29ca-490a-8f05-1181b19b888c",
+				"07684675-586e-4cc0-9c72-ae1901586666",
+				"ec78b129-befd-4c36-928d-bf9d80a79a5b",
+				"77e063ec-3651-4193-8088-b83da6408835"
+			]
+		},
+		{
+			"id": "05ce3982-a229-4215-a7e0-b67dcab461e1",
+			"taller_id": "7458f4e8-6051-70af-cab2-e666d2fa2b4b",
+			"tipo_id": "c965d2ca-5055-413f-af49-7fc659d8d5d0",
+			"nombre": "Hoodie de algodon",
+			"nombre_interno": "Hoodie de algodon",
+			"sku": "Hoo-01",
+			"descripcion": "Hoodie de algodon",
+			"slug": "hoodie-de-algodon",
+			"estado": "activo",
+			"plantilla_id": "hoodie-01",
+			"personalizable": true,
+			"minimo_alerta": null,
+			"dias_extra_sin_stock": 0,
+			"caja": {
+				"alto": 33,
+				"ancho": 5,
+				"largo": 40
+			},
+			"reglas_personalizacion": {
+				"allowText": true,
+				"allowImages": true
+			},
+			"lados_de_plantilla": [
+				"front",
+				"back"
+			],
+			"nota_revision": null,
+			"imagenes": [
+				{
+					"url": "/medios/productos/7458f4e8-6051-70af-cab2-e666d2fa2b4b/3a21a30bad9bdbb0.png",
+					"orden": 0,
+					"tipo": "foto"
+				},
+				{
+					"url": "/medios/productos/7458f4e8-6051-70af-cab2-e666d2fa2b4b/28a10f5a261e8181.png",
+					"orden": 1,
+					"tipo": "foto"
+				}
+			],
+			"colores": [
+				{
+					"nombre": "Blanco",
+					"hex": "#FFF"
+				}
+			],
+			"tallas": [
+				{
+					"talla": "S",
+					"ancho_in": 15,
+					"largo_in": 20,
+					"peso_g": 400,
+					"orden": 0
+				}
+			],
+			"lados": [
+				{
+					"clave": "front",
+					"ancho_cm": 28,
+					"alto_cm": 35,
+					"dpi": 300,
+					"sangrado_cm": 0,
+					"tecnica": null,
+					"recargo": null,
+					"activo": true
+				},
+				{
+					"clave": "back",
+					"ancho_cm": 28,
+					"alto_cm": 35,
+					"dpi": 300,
+					"sangrado_cm": 0,
+					"tecnica": null,
+					"recargo": null,
+					"activo": true
+				}
+			],
+			"precio": {
+				"precio_base": "380.00",
+				"precio_por_lado": null,
+				"precio_antes": null
+			},
+			"produccion": {
+				"dias": 15,
+				"minimo_piezas": null
+			},
+			"existencias": [
+				{
+					"color": "Blanco",
+					"talla": "S",
+					"cantidad": 100
+				}
+			],
+			"fotosReales": [
+				{
+					"lado": "front",
+					"color": "Blanco",
+					"url": "/medios/productos/7458f4e8-6051-70af-cab2-e666d2fa2b4b/5bbf9c49a8caa866.png",
+					"esquinas": [
+						{
+							"x": 0.26751579122340424,
+							"y": 0.26633742392497256
+						},
+						{
+							"x": 0.7268395390070922,
+							"y": 0.2825279634618156
+						},
+						{
+							"x": 0.7208208665780141,
+							"y": 0.5730819116033123
+						},
+						{
+							"x": 0.24781139184397163,
+							"y": 0.5608489363353176
+						}
+					],
+					"banda": null,
+					"orden": 0
+				},
+				{
+					"lado": "back",
+					"color": "Blanco",
+					"url": "/medios/productos/7458f4e8-6051-70af-cab2-e666d2fa2b4b/b3c13a8249a13ec4.png",
+					"esquinas": [
+						{
+							"x": 0.27099263076241137,
+							"y": 0.3012460230359063
+						},
+						{
+							"x": 0.7208208665780141,
+							"y": 0.29870187457736097
+						},
+						{
+							"x": 0.726971132535461,
+							"y": 0.6652698792776613
+						},
+						{
+							"x": 0.26149711879432624,
+							"y": 0.6688117330140676
+						}
+					],
+					"banda": null,
+					"orden": 1
+				}
+			],
+			"categorias": [
+				"07684675-586e-4cc0-9c72-ae1901586666",
+				"db0eea01-f0b3-420c-bd68-64d3bb727b0e",
+				"899dbc9f-c10b-47db-b5e3-66374dcf5dfb",
+				"77e063ec-3651-4193-8088-b83da6408835"
+			]
+		},
+		{
+			"id": "77f0ce1f-3548-4411-9c4a-59b8e06d2654",
+			"taller_id": "7458f4e8-6051-70af-cab2-e666d2fa2b4b",
+			"tipo_id": "0522fe48-091d-42fc-89a1-beb90d70a7b0",
+			"nombre": "Pluma a laser",
+			"nombre_interno": "Pluma a laser",
+			"sku": "PL-01",
+			"descripcion": "Plumas bordado laser",
+			"slug": "pluma-a-laser",
+			"estado": "activo",
+			"plantilla_id": "pencil-01",
+			"personalizable": true,
+			"minimo_alerta": null,
+			"dias_extra_sin_stock": 3,
+			"caja": {
+				"alto": 2,
+				"ancho": 5,
+				"largo": 5
+			},
+			"reglas_personalizacion": {
+				"allowText": true,
+				"allowImages": true
+			},
+			"lados_de_plantilla": [
+				"front"
+			],
+			"nota_revision": null,
+			"imagenes": [
+				{
+					"url": "/medios/productos/7458f4e8-6051-70af-cab2-e666d2fa2b4b/afd7b90470fb7ccd.png",
+					"orden": 0,
+					"tipo": "foto"
+				},
+				{
+					"url": "/medios/productos/7458f4e8-6051-70af-cab2-e666d2fa2b4b/0a29ca5b164e5eb5.png",
+					"orden": 1,
+					"tipo": "foto"
+				}
+			],
+			"colores": [
+				{
+					"nombre": "negro",
+					"hex": "#000"
+				}
+			],
+			"tallas": [
+				{
+					"talla": "u",
+					"ancho_in": 5,
+					"largo_in": 10,
+					"peso_g": null,
+					"orden": 0
+				}
+			],
+			"lados": [
+				{
+					"clave": "front",
+					"ancho_cm": 28,
+					"alto_cm": 35,
+					"dpi": 300,
+					"sangrado_cm": 0,
+					"tecnica": "laser",
+					"recargo": null,
+					"activo": true
+				}
+			],
+			"precio": {
+				"precio_base": "50.00",
+				"precio_por_lado": null,
+				"precio_antes": null
+			},
+			"produccion": {
+				"dias": null,
+				"minimo_piezas": null
+			},
+			"existencias": [
+				{
+					"color": "negro",
+					"talla": "u",
+					"cantidad": 0
+				}
+			],
+			"fotosReales": [
+				{
+					"lado": "front",
+					"color": "negro",
+					"url": "/medios/productos/7458f4e8-6051-70af-cab2-e666d2fa2b4b/82a805d3e779e43b.png",
+					"esquinas": [
+						{
+							"x": 0.45637328235815605,
+							"y": 0.1429021001675321
+						},
+						{
+							"x": 0.585189494680851,
+							"y": 0.1383458751006581
+						},
+						{
+							"x": 0.5909380540780141,
+							"y": 0.5047043197363915
+						},
+						{
+							"x": 0.4657718306737589,
+							"y": 0.5044474680439471
+						}
+					],
+					"banda": null,
+					"orden": 0
+				}
+			],
+			"categorias": [
+				"db0eea01-f0b3-420c-bd68-64d3bb727b0e",
+				"7d9e8c0d-c9fa-4766-97a6-30d51fa4a42a"
+			]
 		}
 	],
-	"arte": [
+	"categoriasPaquete": [
 		{
-			"producto_id": "0efb089a-914a-433b-a253-d758ed91d472",
-			"nombre": "Termo de metal",
-			"sku": "TRM-01",
-			"imagen_url": "/medios/productos/7458f4e8-6051-70af-cab2-e666d2fa2b4b/8341ebe1ecc33673.png",
-			"plantilla_id": "termo-01",
-			"color": "Blanco",
-			"color_hex": "#FFF",
-			"lados": ["wrap"],
-			"arte": [
-				{
-					"dpi": 300,
-					"lado": "wrap",
-					"ruta": "/medios/pedidos/9c67aea2-9167-43af-bc49-7a1e9341fec8/ea5fd185-3f60-441f-ba79-b182b80afa6e-wrap.png",
-					"altoCm": 35,
-					"altoPx": 1031,
-					"prenda": "/medios/pedidos/9c67aea2-9167-43af-bc49-7a1e9341fec8/ea5fd185-3f60-441f-ba79-b182b80afa6e-wrap-prenda.png",
-					"vector": "/medios/pedidos/9c67aea2-9167-43af-bc49-7a1e9341fec8/ea5fd185-3f60-441f-ba79-b182b80afa6e-wrap-vector.svg",
-					"anchoCm": 28,
-					"anchoPx": 3307,
-					"altoRealCm": 8.7,
-					"colocacion": "/medios/pedidos/9c67aea2-9167-43af-bc49-7a1e9341fec8/ea5fd185-3f60-441f-ba79-b182b80afa6e-wrap-colocacion.png",
-					"anchoRealCm": 28
-				}
-			],
-			"diseno_ruta": "/medios/pedidos/9c67aea2-9167-43af-bc49-7a1e9341fec8/ea5fd185-3f60-441f-ba79-b182b80afa6e-diseno.json",
-			"bordados": null,
-			"dias_prometidos": 10
+			"id": "b97c5347-991c-404f-b415-83ede852e9f2",
+			"nombre": "Bodas",
+			"slug": "bodas",
+			"descripcion": "Detalles y recuerdos para celebrar juntos",
+			"orden": 10,
+			"activa": true,
+			"banner": {
+				"alt": "Novios con playeras conmemorativas de su boda",
+				"lado": "izquierda",
+				"boton": {
+					"texto": "Ver los paquetes",
+					"enlace": "/paquetes?categoria=bodas"
+				},
+				"texto": "Totes para los invitados, playeras para la despedida y detalles para los padrinos.",
+				"imagen": "/medios/banners/8cc9317dee63f46e.jpg",
+				"titulo": "Que se lleven algo más que la foto",
+				"etiqueta": null,
+				"colorFondo": "#233328",
+				"colorTexto": "#ffffff",
+				"colorAcento": "#aeff6e"
+			}
 		},
 		{
-			"producto_id": "0efb089a-914a-433b-a253-d758ed91d472",
-			"nombre": "Termo de metal",
-			"sku": "TRM-01",
-			"imagen_url": "/medios/productos/7458f4e8-6051-70af-cab2-e666d2fa2b4b/8341ebe1ecc33673.png",
-			"plantilla_id": "termo-01",
-			"color": "Blanco",
-			"color_hex": "#FFF",
-			"lados": ["wrap"],
-			"arte": [
-				{
-					"dpi": 300,
-					"lado": "wrap",
-					"ruta": "/medios/pedidos/b2b59fd5-c75f-4c2e-a4c4-f6e987ca3e4e/ca371d02-cd54-49db-9fef-86aba07793e6-wrap.png",
-					"altoCm": 35,
-					"altoPx": 1031,
-					"prenda": "/medios/pedidos/b2b59fd5-c75f-4c2e-a4c4-f6e987ca3e4e/ca371d02-cd54-49db-9fef-86aba07793e6-wrap-prenda.png",
-					"vector": "/medios/pedidos/b2b59fd5-c75f-4c2e-a4c4-f6e987ca3e4e/ca371d02-cd54-49db-9fef-86aba07793e6-wrap-vector.svg",
-					"anchoCm": 28,
-					"anchoPx": 3307,
-					"altoRealCm": 8.7,
-					"colocacion": "/medios/pedidos/b2b59fd5-c75f-4c2e-a4c4-f6e987ca3e4e/ca371d02-cd54-49db-9fef-86aba07793e6-wrap-colocacion.png",
-					"anchoRealCm": 28
-				}
-			],
-			"diseno_ruta": "/medios/pedidos/b2b59fd5-c75f-4c2e-a4c4-f6e987ca3e4e/ca371d02-cd54-49db-9fef-86aba07793e6-diseno.json",
-			"bordados": null,
-			"dias_prometidos": 10
+			"id": "8a5a012a-d2d2-48d3-9f17-80b86657e92b",
+			"nombre": "Graduaciones",
+			"slug": "graduaciones",
+			"descripcion": "Para celebrar el cierre de una etapa",
+			"orden": 20,
+			"activa": true,
+			"banner": {
+				"alt": null,
+				"lado": "derecha",
+				"boton": null,
+				"texto": null,
+				"imagen": "/medios/banners/b192bb983f4ec524.png",
+				"titulo": "Haz que tus amigos siempre recuerden tu gracuacion",
+				"etiqueta": null,
+				"colorFondo": "#f4efe4",
+				"colorTexto": "#2b2812",
+				"colorAcento": "#2b2812"
+			}
 		},
 		{
-			"producto_id": "fef3cb1d-5c43-49cf-b5ad-6dfc3209fe9c",
-			"nombre": "Gorra de algodon",
-			"sku": "GR-01",
-			"imagen_url": "/medios/productos/7458f4e8-6051-70af-cab2-e666d2fa2b4b/49684b464bb37223.png",
-			"plantilla_id": "cap",
-			"color": "Blanco",
-			"color_hex": "#FFF",
-			"lados": ["front"],
-			"arte": [
-				{
-					"dpi": 300,
-					"lado": "front",
-					"ruta": "/medios/pedidos/d640a346-d624-4e26-b4fd-8072a08501cb/208a5678-fb4c-49b9-9fcb-e84a145e9e4e-front.png",
-					"altoCm": 5,
-					"altoPx": 472,
-					"prenda": "/medios/pedidos/d640a346-d624-4e26-b4fd-8072a08501cb/208a5678-fb4c-49b9-9fcb-e84a145e9e4e-front-prenda.png",
-					"vector": "/medios/pedidos/d640a346-d624-4e26-b4fd-8072a08501cb/208a5678-fb4c-49b9-9fcb-e84a145e9e4e-front-vector.svg",
-					"anchoCm": 9,
-					"anchoPx": 1063,
-					"altoRealCm": 4,
-					"colocacion": "/medios/pedidos/d640a346-d624-4e26-b4fd-8072a08501cb/208a5678-fb4c-49b9-9fcb-e84a145e9e4e-front-colocacion.png",
-					"anchoRealCm": 9
-				}
-			],
-			"diseno_ruta": "/medios/pedidos/d640a346-d624-4e26-b4fd-8072a08501cb/208a5678-fb4c-49b9-9fcb-e84a145e9e4e-diseno.json",
-			"bordados": null,
-			"dias_prometidos": 10
+			"id": "afd67f20-1ec8-4664-89fa-ab41728557c1",
+			"nombre": "Empresas",
+			"slug": "empresas",
+			"descripcion": "Bienvenida, regalos y eventos de empresa",
+			"orden": 30,
+			"activa": true,
+			"banner": null
 		},
 		{
-			"producto_id": "0efb089a-914a-433b-a253-d758ed91d472",
-			"nombre": "Termo de metal",
-			"sku": "TRM-01",
-			"imagen_url": "/medios/productos/7458f4e8-6051-70af-cab2-e666d2fa2b4b/8341ebe1ecc33673.png",
-			"plantilla_id": "termo-01",
-			"color": "Blanco",
-			"color_hex": "#FFF",
-			"lados": ["wrap"],
-			"arte": [
-				{
-					"dpi": 300,
-					"lado": "wrap",
-					"ruta": "/medios/pedidos/9e340c20-04e7-4699-a6f3-7473dd1a8215/bd20f3b1-c687-42a1-a7db-356cf5396b0b-wrap.png",
-					"altoCm": 35,
-					"altoPx": 1031,
-					"prenda": "/medios/pedidos/9e340c20-04e7-4699-a6f3-7473dd1a8215/bd20f3b1-c687-42a1-a7db-356cf5396b0b-wrap-prenda.png",
-					"vector": "/medios/pedidos/9e340c20-04e7-4699-a6f3-7473dd1a8215/bd20f3b1-c687-42a1-a7db-356cf5396b0b-wrap-vector.svg",
-					"anchoCm": 28,
-					"anchoPx": 3307,
-					"altoRealCm": 8.7,
-					"colocacion": "/medios/pedidos/9e340c20-04e7-4699-a6f3-7473dd1a8215/bd20f3b1-c687-42a1-a7db-356cf5396b0b-wrap-colocacion.png",
-					"anchoRealCm": 28
-				}
-			],
-			"diseno_ruta": "/medios/pedidos/9e340c20-04e7-4699-a6f3-7473dd1a8215/bd20f3b1-c687-42a1-a7db-356cf5396b0b-diseno.json",
-			"bordados": null,
-			"dias_prometidos": 10
-		},
-		{
-			"producto_id": "dc4be280-e6a1-4be0-b13d-a2862f05a717",
-			"nombre": "Taza de ceramica",
-			"sku": "Taz01",
-			"imagen_url": "/medios/productos/7458f4e8-6051-70af-cab2-e666d2fa2b4b/e0d86e20d1e1c065.png",
-			"plantilla_id": "taza-01",
-			"color": "Blanco",
-			"color_hex": "#fff",
-			"lados": ["wrap"],
-			"arte": [
-				{
-					"dpi": 300,
-					"lado": "wrap",
-					"ruta": "/medios/pedidos/430f5652-9af2-4fb9-8bf3-3aca4944fb0a/6502f883-145f-4a13-bf04-8cff4bcba5cf-wrap.png",
-					"altoCm": 35,
-					"altoPx": 1050,
-					"prenda": "/medios/pedidos/430f5652-9af2-4fb9-8bf3-3aca4944fb0a/6502f883-145f-4a13-bf04-8cff4bcba5cf-wrap-prenda.png",
-					"anchoCm": 28,
-					"anchoPx": 3307,
-					"altoRealCm": 8.9,
-					"colocacion": "/medios/pedidos/430f5652-9af2-4fb9-8bf3-3aca4944fb0a/6502f883-145f-4a13-bf04-8cff4bcba5cf-wrap-colocacion.png",
-					"anchoRealCm": 28
-				}
-			],
-			"diseno_ruta": "/medios/pedidos/430f5652-9af2-4fb9-8bf3-3aca4944fb0a/6502f883-145f-4a13-bf04-8cff4bcba5cf-diseno.json",
-			"bordados": null,
-			"dias_prometidos": 10
-		},
-		{
-			"producto_id": "e14c57a4-4c49-459f-b1a7-b2c3eb0dc979",
-			"nombre": "Playera de cuello redondo",
-			"sku": "PLY-01",
-			"imagen_url": "/medios/productos/7458f4e8-6051-70af-cab2-e666d2fa2b4b/6696c8c099fa9d12.png",
-			"plantilla_id": "tshirt",
-			"color": "Blanco",
-			"color_hex": "#FFF",
-			"lados": ["front"],
-			"arte": [
-				{
-					"dpi": 300,
-					"lado": "front",
-					"ruta": "/medios/pedidos/430f5652-9af2-4fb9-8bf3-3aca4944fb0a/52bcc2f9-d8cc-498e-96f5-fe237da5bceb-front.png",
-					"altoCm": 35,
-					"altoPx": 4283,
-					"prenda": "/medios/pedidos/430f5652-9af2-4fb9-8bf3-3aca4944fb0a/52bcc2f9-d8cc-498e-96f5-fe237da5bceb-front-prenda.png",
-					"anchoCm": 28,
-					"anchoPx": 3307,
-					"altoRealCm": 36.3,
-					"colocacion": "/medios/pedidos/430f5652-9af2-4fb9-8bf3-3aca4944fb0a/52bcc2f9-d8cc-498e-96f5-fe237da5bceb-front-colocacion.png",
-					"anchoRealCm": 28
-				}
-			],
-			"diseno_ruta": "/medios/pedidos/430f5652-9af2-4fb9-8bf3-3aca4944fb0a/52bcc2f9-d8cc-498e-96f5-fe237da5bceb-diseno.json",
-			"bordados": null,
-			"dias_prometidos": 15
-		},
-		{
-			"producto_id": "e14c57a4-4c49-459f-b1a7-b2c3eb0dc979",
-			"nombre": "Playera de cuello redondo",
-			"sku": "PLY-01",
-			"imagen_url": "/medios/productos/7458f4e8-6051-70af-cab2-e666d2fa2b4b/6696c8c099fa9d12.png",
-			"plantilla_id": "tshirt",
-			"color": "Blanco",
-			"color_hex": "#FFF",
-			"lados": ["front"],
-			"arte": [
-				{
-					"dpi": 300,
-					"lado": "front",
-					"ruta": "/medios/pedidos/430f5652-9af2-4fb9-8bf3-3aca4944fb0a/c15c779d-58b7-4981-a68b-5666f6d8d0a1-front.png",
-					"altoCm": 35,
-					"altoPx": 4283,
-					"prenda": "/medios/pedidos/430f5652-9af2-4fb9-8bf3-3aca4944fb0a/c15c779d-58b7-4981-a68b-5666f6d8d0a1-front-prenda.png",
-					"anchoCm": 28,
-					"anchoPx": 3307,
-					"altoRealCm": 36.3,
-					"colocacion": "/medios/pedidos/430f5652-9af2-4fb9-8bf3-3aca4944fb0a/c15c779d-58b7-4981-a68b-5666f6d8d0a1-front-colocacion.png",
-					"anchoRealCm": 28
-				}
-			],
-			"diseno_ruta": "/medios/pedidos/430f5652-9af2-4fb9-8bf3-3aca4944fb0a/c15c779d-58b7-4981-a68b-5666f6d8d0a1-diseno.json",
-			"bordados": null,
-			"dias_prometidos": 15
-		},
-		{
-			"producto_id": "dc4be280-e6a1-4be0-b13d-a2862f05a717",
-			"nombre": "Taza de ceramica",
-			"sku": "Taz01",
-			"imagen_url": "/medios/productos/7458f4e8-6051-70af-cab2-e666d2fa2b4b/e0d86e20d1e1c065.png",
-			"plantilla_id": "taza-01",
-			"color": "Blanco",
-			"color_hex": "#fff",
-			"lados": ["wrap"],
-			"arte": [
-				{
-					"dpi": 300,
-					"lado": "wrap",
-					"ruta": "/medios/pedidos/86dec58f-9a77-4027-bd7b-f6eaf9d8c80e/071666e4-4720-443b-9d2a-c8f2863dcdf5-wrap.png",
-					"altoCm": 35,
-					"altoPx": 1050,
-					"prenda": "/medios/pedidos/86dec58f-9a77-4027-bd7b-f6eaf9d8c80e/071666e4-4720-443b-9d2a-c8f2863dcdf5-wrap-prenda.png",
-					"anchoCm": 28,
-					"anchoPx": 3307,
-					"altoRealCm": 8.9,
-					"colocacion": "/medios/pedidos/86dec58f-9a77-4027-bd7b-f6eaf9d8c80e/071666e4-4720-443b-9d2a-c8f2863dcdf5-wrap-colocacion.png",
-					"anchoRealCm": 28
-				}
-			],
-			"diseno_ruta": "/medios/pedidos/86dec58f-9a77-4027-bd7b-f6eaf9d8c80e/071666e4-4720-443b-9d2a-c8f2863dcdf5-diseno.json",
-			"bordados": null,
-			"dias_prometidos": 10
-		},
-		{
-			"producto_id": "fef3cb1d-5c43-49cf-b5ad-6dfc3209fe9c",
-			"nombre": "Gorra de algodon",
-			"sku": "GR-01",
-			"imagen_url": "/medios/productos/7458f4e8-6051-70af-cab2-e666d2fa2b4b/49684b464bb37223.png",
-			"plantilla_id": "cap",
-			"color": "Blanco",
-			"color_hex": "#FFF",
-			"lados": ["front"],
-			"arte": [
-				{
-					"dpi": 300,
-					"lado": "front",
-					"ruta": "/medios/pedidos/d1f895ba-1e38-4a49-a60d-fbc639440091/880a45a1-f222-4538-874c-eeb9c6d994a8-front.png",
-					"altoCm": 5,
-					"altoPx": 472,
-					"prenda": "/medios/pedidos/d1f895ba-1e38-4a49-a60d-fbc639440091/880a45a1-f222-4538-874c-eeb9c6d994a8-front-prenda.png",
-					"vector": "/medios/pedidos/d1f895ba-1e38-4a49-a60d-fbc639440091/880a45a1-f222-4538-874c-eeb9c6d994a8-front-vector.svg",
-					"anchoCm": 9,
-					"anchoPx": 1063,
-					"altoRealCm": 4,
-					"colocacion": "/medios/pedidos/d1f895ba-1e38-4a49-a60d-fbc639440091/880a45a1-f222-4538-874c-eeb9c6d994a8-front-colocacion.png",
-					"anchoRealCm": 9
-				}
-			],
-			"diseno_ruta": "/medios/pedidos/d1f895ba-1e38-4a49-a60d-fbc639440091/880a45a1-f222-4538-874c-eeb9c6d994a8-diseno.json",
-			"bordados": null,
-			"dias_prometidos": 10
+			"id": "e6892060-8b23-4047-845b-728d9e0efa9c",
+			"nombre": "Equipos",
+			"slug": "equipos",
+			"descripcion": "Para grupos, clubes y equipos",
+			"orden": 40,
+			"activa": true,
+			"banner": null
 		}
-	]
+	],
+	"paquetes": [
+		{
+			"id": "8b8d0568-2de3-4e48-8595-24e6fde9f6c8",
+			"taller_id": "7458f4e8-6051-70af-cab2-e666d2fa2b4b",
+			"nombre": "Kit de bienvenida para invitados",
+			"descripcion": "Playera, tote y vaso para cada invitado.",
+			"precio_base": "780.00",
+			"descuento_porcentaje": 12,
+			"version": 1,
+			"estado": "activo",
+			"nota_revision": null,
+			"productos": [
+				{
+					"producto_id": "fef3cb1d-5c43-49cf-b5ad-6dfc3209fe9c",
+					"cantidad": 2,
+					"orden": 1
+				},
+				{
+					"producto_id": "a031b52d-1b2f-4ba7-9286-983eab4cccfb",
+					"cantidad": 1,
+					"orden": 2
+				},
+				{
+					"producto_id": "e14c57a4-4c49-459f-b1a7-b2c3eb0dc979",
+					"cantidad": 2,
+					"orden": 3
+				}
+			],
+			"categorias": [
+				"b97c5347-991c-404f-b415-83ede852e9f2"
+			]
+		},
+		{
+			"id": "06a641e9-794d-4697-8c9b-289abe9b7420",
+			"taller_id": "7458f4e8-6051-70af-cab2-e666d2fa2b4b",
+			"nombre": "Mesa de regalos: termos y tazas",
+			"descripcion": "Para la mesa de recuerdos, en juego.",
+			"precio_base": "1340.00",
+			"descuento_porcentaje": 11,
+			"version": 1,
+			"estado": "activo",
+			"nota_revision": null,
+			"productos": [
+				{
+					"producto_id": "fef3cb1d-5c43-49cf-b5ad-6dfc3209fe9c",
+					"cantidad": 2,
+					"orden": 1
+				},
+				{
+					"producto_id": "a031b52d-1b2f-4ba7-9286-983eab4cccfb",
+					"cantidad": 1,
+					"orden": 2
+				},
+				{
+					"producto_id": "e14c57a4-4c49-459f-b1a7-b2c3eb0dc979",
+					"cantidad": 2,
+					"orden": 3
+				}
+			],
+			"categorias": [
+				"b97c5347-991c-404f-b415-83ede852e9f2"
+			]
+		},
+		{
+			"id": "12ced73a-9080-46c7-b838-a0abc70a61ba",
+			"taller_id": "7458f4e8-6051-70af-cab2-e666d2fa2b4b",
+			"nombre": "Detalle para padrinos",
+			"descripcion": "Un termo grabado y una mochila.",
+			"precio_base": "980.00",
+			"descuento_porcentaje": 9,
+			"version": 1,
+			"estado": "activo",
+			"nota_revision": null,
+			"productos": [
+				{
+					"producto_id": "fef3cb1d-5c43-49cf-b5ad-6dfc3209fe9c",
+					"cantidad": 2,
+					"orden": 1
+				},
+				{
+					"producto_id": "a031b52d-1b2f-4ba7-9286-983eab4cccfb",
+					"cantidad": 1,
+					"orden": 2
+				},
+				{
+					"producto_id": "e14c57a4-4c49-459f-b1a7-b2c3eb0dc979",
+					"cantidad": 2,
+					"orden": 3
+				}
+			],
+			"categorias": [
+				"b97c5347-991c-404f-b415-83ede852e9f2"
+			]
+		},
+		{
+			"id": "f7bc371d-b3c6-47fe-b71a-fb4968d1dd18",
+			"taller_id": "7458f4e8-6051-70af-cab2-e666d2fa2b4b",
+			"nombre": "Paquete generación completa",
+			"descripcion": "Playera, gorra y termo para cada quien.",
+			"precio_base": "1560.00",
+			"descuento_porcentaje": 14,
+			"version": 1,
+			"estado": "activo",
+			"nota_revision": null,
+			"productos": [
+				{
+					"producto_id": "fef3cb1d-5c43-49cf-b5ad-6dfc3209fe9c",
+					"cantidad": 2,
+					"orden": 1
+				},
+				{
+					"producto_id": "a031b52d-1b2f-4ba7-9286-983eab4cccfb",
+					"cantidad": 1,
+					"orden": 2
+				},
+				{
+					"producto_id": "e14c57a4-4c49-459f-b1a7-b2c3eb0dc979",
+					"cantidad": 2,
+					"orden": 3
+				}
+			],
+			"categorias": [
+				"8a5a012a-d2d2-48d3-9f17-80b86657e92b",
+				"b97c5347-991c-404f-b415-83ede852e9f2"
+			]
+		},
+		{
+			"id": "155d8392-f352-41d4-82cf-d25f186dd20c",
+			"taller_id": "7458f4e8-6051-70af-cab2-e666d2fa2b4b",
+			"nombre": "Onboarding para nuevo ingreso",
+			"descripcion": "Lo que recibe alguien que entra al equipo.",
+			"precio_base": "1120.00",
+			"descuento_porcentaje": 13,
+			"version": 1,
+			"estado": "activo",
+			"nota_revision": null,
+			"productos": [
+				{
+					"producto_id": "fef3cb1d-5c43-49cf-b5ad-6dfc3209fe9c",
+					"cantidad": 2,
+					"orden": 1
+				},
+				{
+					"producto_id": "a031b52d-1b2f-4ba7-9286-983eab4cccfb",
+					"cantidad": 1,
+					"orden": 2
+				},
+				{
+					"producto_id": "e14c57a4-4c49-459f-b1a7-b2c3eb0dc979",
+					"cantidad": 2,
+					"orden": 3
+				}
+			],
+			"categorias": [
+				"afd67f20-1ec8-4664-89fa-ab41728557c1",
+				"b97c5347-991c-404f-b415-83ede852e9f2"
+			]
+		},
+		{
+			"id": "1a24ecf7-477b-47f0-8454-37df78816710",
+			"taller_id": "7458f4e8-6051-70af-cab2-e666d2fa2b4b",
+			"nombre": "20 Hoodies de graduacion",
+			"descripcion": "20 sudaderas con gorro personalizadas para toda tu generacion",
+			"precio_base": "7600.00",
+			"descuento_porcentaje": 10,
+			"version": 2,
+			"estado": "activo",
+			"nota_revision": null,
+			"productos": [
+				{
+					"producto_id": "05ce3982-a229-4215-a7e0-b67dcab461e1",
+					"cantidad": 20,
+					"orden": 0
+				}
+			],
+			"categorias": [
+				"8a5a012a-d2d2-48d3-9f17-80b86657e92b"
+			]
+		}
+	],
+	"arte": []
 }

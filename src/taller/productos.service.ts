@@ -10,6 +10,7 @@ import { DB, type Db } from "../db/db.module";
 import * as e from "../db/esquema";
 import { claveDeVariante } from "../pedidos/lineas";
 import {
+	exigirFotosReales,
 	validarFotosReales,
 	validarRecargos,
 	validarTecnicas,
@@ -61,6 +62,13 @@ export class ProductosTallerService {
 	 */
 	async crear(tallerId: string, cuerpo: Cuerpo) {
 		const datos = this.validar(cuerpo);
+		if (cuerpo.enviar === true) {
+			exigirFotosReales(
+				cuerpo.printSides,
+				cuerpo.colors,
+				datos.hijas.fotosReales,
+			);
+		}
 		await this.exigirTipo(datos.producto.tipoId);
 		const estado: Estado = cuerpo.enviar === true ? "en_revision" : "borrador";
 
@@ -92,6 +100,15 @@ export class ProductosTallerService {
 	async actualizar(tallerId: string, id: string, cuerpo: Cuerpo) {
 		const previo = await this.suyoOFalla(tallerId, id);
 		const datos = this.validar(cuerpo, previo);
+		/* Al mandar a revisión un producto que nunca se aprobó, igual que al
+		   crearlo. Uno ya activo que se corrige no se atora por esto. */
+		if (cuerpo.enviar === true && previo.estado !== "activo") {
+			exigirFotosReales(
+				cuerpo.printSides,
+				cuerpo.colors,
+				datos.hijas.fotosReales,
+			);
+		}
 		await this.exigirTipo(datos.producto.tipoId);
 
 		const estado: Estado =

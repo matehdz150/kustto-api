@@ -179,3 +179,43 @@ function leerEsquinas(valor: unknown, lado: string) {
 		return { x, y };
 	});
 }
+
+/**
+ * Exige foto real de CADA lado imprimible en CADA color antes de revisión.
+ *
+ * Es obligatoria porque es la imagen que ve el comprador en el carrito, en el
+ * checkout y en sus pedidos: su diseño sobre la prenda de verdad. Sin la foto
+ * de una combinación, quien elija ese color y ese lado vería el dibujo plano.
+ *
+ * Sólo al ENVIAR: un borrador se guarda a medias, y el taller puede tardar en
+ * fotografiar todo. Si el cuerpo no trae lados, colores o fotos (un cliente
+ * viejo, o una edición parcial) no hay con qué comparar y no se exige.
+ */
+export function exigirFotosReales(
+	lados: unknown,
+	colores: unknown,
+	fotos: FotoReal[] | undefined,
+) {
+	if (!Array.isArray(lados) || !Array.isArray(colores) || fotos === undefined)
+		return;
+
+	const claves = lados
+		.map((l) => String((l as Cuerpo)?.sideKey ?? "").trim())
+		.filter(Boolean);
+	const nombres = colores
+		.map((c) => String((c as Cuerpo)?.name ?? "").trim())
+		.filter(Boolean);
+	const hay = new Set(fotos.map((f) => `${f.lado}|${f.color}`));
+
+	const faltan = claves.flatMap((lado) =>
+		nombres
+			.filter((color) => !hay.has(`${lado}|${color}`))
+			.map((color) => `${lado} en ${color}`),
+	);
+
+	if (faltan.length > 0) {
+		throw new BadRequestException(
+			`Falta la foto real de la prenda de: ${faltan.join(", ")}. Es obligatoria para enviarlo a revisión.`,
+		);
+	}
+}

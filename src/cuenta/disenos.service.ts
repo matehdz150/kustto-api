@@ -9,6 +9,7 @@ import { AlmacenService } from "../almacen/almacen.service";
 import type { Identidad } from "../auth/identidad";
 import { DB, type Db } from "../db/db.module";
 import * as e from "../db/esquema";
+import { vistaDeLinea } from "../pedidos/vista-de-linea";
 import { correoDe, idOrdenable } from "./comun";
 import { PerfilService } from "./perfil.service";
 
@@ -103,13 +104,13 @@ export class DisenosService {
 			);
 		}
 
-		/* El primer lado representa al diseño en la rejilla, y se usa la
-		   COLOCACIÓN y no el arte: el arte va recortado y transparente, y en
-		   pequeño no se reconoce. Que falte sólo significa que se ve peor. */
-		const primerLado = (partida.arte as { colocacion?: string }[] | null)?.[0];
-		const miniatura = primerLado?.colocacion
+		/* La miniatura es la prenda con el diseño, nunca el arte suelto: el arte
+		   va recortado y transparente, y en pequeño no se reconoce. La foto real
+		   si la hay, si no la colocación. Que falte sólo significa que se ve peor. */
+		const vista = vistaDeLinea(partida.arte);
+		const miniatura = vista
 			? (await this.almacen.copiar(
-					primerLado.colocacion.replace(/^\//, ""),
+					vista.replace(/^\//, ""),
 					`${base}-vista.png`,
 				))
 				? `/${base}-vista.png`

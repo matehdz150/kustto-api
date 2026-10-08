@@ -1,6 +1,8 @@
 import { Global, Module } from "@nestjs/common";
 import { CuentasController } from "./cuentas.controller";
 import { CuentasService } from "./cuentas.service";
+import { GoogleController } from "./google.controller";
+import { GoogleService } from "./google.service";
 import { JwtService } from "./jwt.service";
 import { RegistroService } from "./registro.service";
 import { RestablecerService } from "./restablecer.service";
@@ -15,7 +17,7 @@ import { TopesService } from "./topes.service";
  */
 @Global()
 @Module({
-	controllers: [CuentasController],
+	controllers: [CuentasController, GoogleController],
 	providers: [
 		JwtService,
 		SesionesService,
@@ -23,6 +25,7 @@ import { TopesService } from "./topes.service";
 		CuentasService,
 		RegistroService,
 		RestablecerService,
+		GoogleService,
 	],
 	exports: [
 		JwtService,

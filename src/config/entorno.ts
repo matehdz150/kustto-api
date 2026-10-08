@@ -81,6 +81,24 @@ const esquema = z.object({
 	 */
 	COOKIE_SEGURA: interruptor(true),
 	/**
+	 * "Continuar con Google". Sin el ID y el secreto el botón del sitio avisa
+	 * que no está disponible y las rutas contestan 404: apagarlo es quitarlos.
+	 */
+	GOOGLE_CLIENT_ID: opcional(z.string()),
+	/** Es un secreto: va en el gestor de secretos del servidor, nunca en el repo. */
+	GOOGLE_CLIENT_SECRET: opcional(z.string()),
+	/**
+	 * A dónde devuelve Google el código. TIENE QUE COINCIDIR carácter por
+	 * carácter con lo registrado en la consola de Google. Vacío = se arma con el
+	 * emisor (`JWT_EMISOR`), que en producción es la API pública.
+	 */
+	GOOGLE_REDIRECT_URI: opcional(z.string().url()),
+	/**
+	 * El sitio, a donde se manda a la persona al terminar. En local,
+	 * `http://localhost:3000`.
+	 */
+	KUSTTO_SITIO: z.string().default("https://kustto.com.mx"),
+	/**
 	 * Detrás de un proxy o balanceador, la IP del cliente viene en
 	 * `X-Forwarded-For`. Sin esto, el límite de intentos por IP contaría a
 	 * todo el mundo como si fuera el balanceador. Encenderlo SIN proxy delante

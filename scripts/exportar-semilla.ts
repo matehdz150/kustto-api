@@ -1,7 +1,9 @@
 /**
- * Saca de la base local el catálogo que usa `pnpm db:sembrar`.
+ * Saca el catálogo que usa `pnpm db:sembrar`.
  *
- *   pnpm db:exportar-semilla
+ *   pnpm db:exportar-semilla       # de la base local
+ *   pnpm db:traer-produccion       # de producción, por un túnel (ver
+ *                                  # scripts/traer-produccion.sh)
  *
  * Escribe `semilla/catalogo.json`: plantillas, categorías, productos con todo
  * lo suyo, y los archivos de producción de pedidos ya hechos. Se corre cuando
@@ -18,8 +20,9 @@
  * NO LLEVA DATOS DE PERSONAS. Ni correos, ni nombres, ni direcciones de quien
  * compró: de los pedidos sólo se toma el arte (qué se imprimió, en qué lado,
  * con qué archivo). Los compradores de la semilla los inventa `sembrar.ts`.
- * Los talleres tampoco viajan: la semilla crea los suyos y les reparte los
- * productos.
+ * De los talleres viaja sólo lo PÚBLICO —nombre, slug, bio, avatar—, para que
+ * cada producto y cada paquete sigan siendo del taller que los vende; el
+ * correo, el WhatsApp y la dirección de recolección los inventa la semilla.
  *
  * Y NO LLEVA CATEGORÍAS VACÍAS: una categoría sin foto y sin productos es
  * resto de pruebas ("Otro nombre", cuatro veces) y sólo ensucia la cabecera.
@@ -44,6 +47,16 @@ function urlPublica(ruta: string) {
 
 const comprobadas = new Map<string, Promise<boolean>>();
 
+/**
+ * Por qué falló cada comprobación que NO respondió el servidor (red, TLS). Si
+ * todas fallan así, el problema es la red y no las imágenes: un firewall que
+ * intercepta el HTTPS (pasó con un Fortinet en una oficina) hace que cada
+ * imagen "falte", el catálogo sale vacío y `traer.sh` vaciaría la base local
+ * para sembrarla con nada.
+ */
+const fallasDeRed: string[] = [];
+let respondidas = 0;
+
 /** Si el objeto está en el bucket. Una ruta que no es nuestra se da por buena. */
 function existe(ruta: string | null | undefined): Promise<boolean> {
 	if (!ruta) return Promise.resolve(true);
@@ -53,10 +66,15 @@ function existe(ruta: string | null | undefined): Promise<boolean> {
 	if (!pendiente) {
 		pendiente = fetch(url)
 			.then(async (r) => {
+				respondidas++;
 				await r.body?.cancel();
 				return r.ok;
 			})
-			.catch(() => false);
+			.catch((error: Error) => {
+				const causa = (error.cause as Error | undefined)?.message;
+				fallasDeRed.push(causa ?? error.message);
+				return false;
+			});
 		comprobadas.set(url, pendiente);
 	}
 	return pendiente;
@@ -81,9 +99,11 @@ function rutasDePlantilla(datos: unknown): string[] {
 }
 
 async function principal() {
+	/* Siempre una dirección LOCAL: la base local o el extremo local del túnel
+	   a producción. Nunca se le da a esto la dirección de la base de verdad. */
 	const url = process.env.DATABASE_URL;
 	if (!url || !["localhost", "127.0.0.1"].includes(new URL(url).hostname))
-		throw new Error("Sólo se exporta desde la base local");
+		throw new Error("Sólo se exporta desde una dirección local (base o túnel)");
 
 	const pool = new Pool({ connectionString: url });
 	const q = async <T>(sql: string, params: unknown[] = []) =>
@@ -108,8 +128,9 @@ async function principal() {
 			descripcion: string | null;
 			imagen_url: string | null;
 			orden: number;
+			color: string | null;
 		}>(
-			"select id, nombre, slug, descripcion, imagen_url, orden from categorias order by orden, nombre",
+			"select id, nombre, slug, descripcion, imagen_url, orden, color from categorias order by orden, nombre",
 		)) {
 			/* Una categoría sin foto sigue siendo útil: se queda, sin la foto. */
 			const foto = (await existe(c.imagen_url)) ? c.imagen_url : null;
@@ -122,12 +143,25 @@ async function principal() {
 				descripcion: c.descripcion,
 				imagenUrl: foto,
 				orden: c.orden,
+				color: c.color,
 			});
 		}
 
+		/* Los tipos de producto (Playeras, Termos…) van todos: son pocos y la
+		   tienda enseña también los que aún no tienen productos. */
+		const tipos = await q<{
+			id: string;
+			nombre: string;
+			slug: string;
+			titulo: string | null;
+			orden: number;
+		}>(
+			"select id, nombre, slug, titulo, orden from tipos_de_producto order by orden, nombre",
+		);
+
 		/* ─── Productos ───────────────────────────────────────────────────── */
 		const filas = await q<Record<string, unknown>>(
-			`select id, taller_id, nombre, nombre_interno, sku, descripcion, slug,
+			`select id, taller_id, tipo_id, nombre, nombre_interno, sku, descripcion, slug,
 			        estado, plantilla_id, personalizable, minimo_alerta,
 			        dias_extra_sin_stock, caja, reglas_personalizacion,
 			        lados_de_plantilla, nota_revision
@@ -150,7 +184,7 @@ async function principal() {
 			return m;
 		};
 		const imagenes = agrupar(
-			await hijos("producto_imagenes", "url, orden", "order by orden"),
+			await hijos("producto_imagenes", "url, orden, tipo", "order by orden"),
 		);
 		const colores = agrupar(await hijos("producto_colores", "nombre, hex"));
 		const tallas = agrupar(
@@ -167,7 +201,10 @@ async function principal() {
 			),
 		);
 		const precios = agrupar(
-			await hijos("producto_precios", "precio_base, precio_por_lado"),
+			await hijos(
+				"producto_precios",
+				"precio_base, precio_por_lado, precio_antes",
+			),
 		);
 		const produccion = agrupar(
 			await hijos("producto_produccion", "dias, minimo_piezas"),
@@ -203,7 +240,7 @@ async function principal() {
 			productos.push({
 				...p,
 				id,
-				taller_id: undefined,
+				taller_id: String(p.taller_id),
 				/* Una plantilla que se quedó fuera no puede quedar apuntada. */
 				plantilla_id:
 					plantilla && plantillasValidas.has(plantilla) ? plantilla : null,
@@ -225,6 +262,87 @@ async function principal() {
 		const categoriasUtiles = categorias.filter(
 			(c) => c.imagenUrl || conProductos.has(c.id),
 		);
+
+		/* ─── Paquetes ────────────────────────────────────────────────────── */
+		const categoriasPaquete = [];
+		for (const c of await q<Record<string, unknown>>(
+			"select id, nombre, slug, descripcion, orden, activa, banner from categorias_paquete order by orden",
+		)) {
+			const banner = c.banner as { imagen?: string | null } | null;
+			/* Un banner cuya foto no está se queda sin foto, no fuera. */
+			const imagen = (await existe(banner?.imagen)) ? banner?.imagen : null;
+			categoriasPaquete.push({
+				...c,
+				banner: banner ? { ...banner, imagen: imagen ?? null } : null,
+			});
+		}
+		const productosDe = new Map<string, Record<string, unknown>[]>();
+		for (const { paquete_id, ...resto } of await q<Record<string, unknown>>(
+			"select paquete_id, producto_id, cantidad, orden from paquete_productos order by orden",
+		))
+			productosDe.set(String(paquete_id), [
+				...(productosDe.get(String(paquete_id)) ?? []),
+				resto,
+			]);
+		const categoriasDePaquete = new Map<string, string[]>();
+		for (const { paquete_id, categoria_id } of await q<{
+			paquete_id: string;
+			categoria_id: string;
+		}>("select paquete_id, categoria_id from paquete_categorias"))
+			categoriasDePaquete.set(paquete_id, [
+				...(categoriasDePaquete.get(paquete_id) ?? []),
+				categoria_id,
+			]);
+		const paquetes = [];
+		for (const p of await q<Record<string, unknown>>(
+			`select id, taller_id, nombre, descripcion, precio_base,
+			        descuento_porcentaje, version, estado, nota_revision
+			   from paquetes where estado = any($1) order by creado_en`,
+			[ESTADOS],
+		)) {
+			const id = String(p.id);
+			const suyos = productosDe.get(id) ?? [];
+			/* Un paquete con una pieza que se quedó fuera no se puede armar. */
+			if (
+				suyos.length === 0 ||
+				!suyos.every((x) => exportados.has(String(x.producto_id)))
+			) {
+				console.warn(`Paquete fuera, le falta un producto: ${p.nombre}`);
+				continue;
+			}
+			paquetes.push({
+				...p,
+				id,
+				taller_id: String(p.taller_id),
+				productos: suyos,
+				categorias: categoriasDePaquete.get(id) ?? [],
+			});
+		}
+
+		/* ─── Talleres: sólo lo público ───────────────────────────────────── */
+		const conAlgo = new Set([
+			...productos.map((p) => p.taller_id),
+			...paquetes.map((p) => p.taller_id),
+		]);
+		const talleres = [];
+		for (const t of await q<{
+			id: string;
+			nombre: string;
+			slug: string;
+			nombre_publico: string | null;
+			bio: string | null;
+			avatar_url: string | null;
+			banner_url: string | null;
+		}>(
+			"select id, nombre, slug, nombre_publico, bio, avatar_url, banner_url from talleres order by creado_en",
+		)) {
+			if (!conAlgo.has(t.id)) continue;
+			talleres.push({
+				...t,
+				avatar_url: (await existe(t.avatar_url)) ? t.avatar_url : null,
+				banner_url: (await existe(t.banner_url)) ? t.banner_url : null,
+			});
+		}
 
 		/* ─── El arte de pedidos ya hechos ────────────────────────────────── */
 		const arte = [];
@@ -252,6 +370,15 @@ async function principal() {
 			arte.push(a);
 		}
 
+		if (respondidas === 0 && fallasDeRed.length > 0) {
+			throw new Error(
+				`No pude comprobar ninguna imagen en ${API}: ${fallasDeRed[0]}.\n` +
+					"Es la red, no las imágenes (¿un firewall que intercepta el HTTPS?). " +
+					"No escribí semilla/catalogo.json ni toqué tu base local. " +
+					"Prueba desde otra red (en casa o con el teléfono).",
+			);
+		}
+
 		await mkdir("semilla", { recursive: true });
 		await writeFile(
 			"semilla/catalogo.json",
@@ -259,7 +386,11 @@ async function principal() {
 				{
 					plantillas,
 					categorias: categoriasUtiles,
+					tipos,
+					talleres,
 					productos,
+					categoriasPaquete,
+					paquetes,
 					arte,
 				},
 				null,
@@ -268,7 +399,8 @@ async function principal() {
 		);
 		console.log(
 			`semilla/catalogo.json: ${plantillas.length} plantillas, ${categoriasUtiles.length} categorías, ` +
-				`${productos.length} productos, ${arte.length} artes de pedido`,
+				`${tipos.length} tipos, ${talleres.length} talleres, ${productos.length} productos, ` +
+				`${paquetes.length} paquetes, ${arte.length} artes de pedido`,
 		);
 	} finally {
 		await pool.end();

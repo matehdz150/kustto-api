@@ -312,12 +312,16 @@ export class PlantillasDeCompraService {
 			);
 			if (!hay) continue;
 
-			for (const extra of ["colocacion", "prenda"]) {
-				await this.almacen.copiar(
-					`${origen}/${lado}-${extra}.png`,
-					`carritos/${carritoId}/${lado}-${extra}.png`,
-				);
-			}
+			await this.almacen.copiar(
+				`${origen}/${lado}-colocacion.png`,
+				`carritos/${carritoId}/${lado}-colocacion.png`,
+			);
+			/* Si la foto real con el diseño llegó, el lado lo dice: es la imagen que
+			   enseña el pedido que salga de aquí (ver `vistaDeLinea`). */
+			const conPrenda = await this.almacen.copiar(
+				`${origen}/${lado}-prenda.png`,
+				`carritos/${carritoId}/${lado}-prenda.png`,
+			);
 			await this.almacen.copiar(
 				`${origen}/${lado}-vector.svg`,
 				`carritos/${carritoId}/${lado}-vector.svg`,
@@ -328,6 +332,7 @@ export class PlantillasDeCompraService {
 				anchoPx: Math.trunc(Number(l?.anchoPx ?? 0)),
 				altoPx: Math.trunc(Number(l?.altoPx ?? 0)),
 				dpi: Math.trunc(Number(l?.dpi ?? 0)) || 300,
+				...(conPrenda ? { conPrenda: true } : {}),
 			});
 		}
 

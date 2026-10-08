@@ -107,6 +107,22 @@ function compromiso(
  * cliente. Lo que sí se hace es no creerse cualquier cosa: sin números buenos,
  * no se guarda nada.
  */
+/**
+ * Si el navegador subió la foto real con el diseño de ese lado.
+ *
+ * La ruta de `prenda` se escribe siempre y el archivo puede no existir: sólo
+ * hay foto cuando el taller la subió para ese lado y ese color. Lo que lo
+ * dice es el navegador, que es quien la genera y la sube, y con esta marca
+ * quien enseña la línea sabe que puede usarla en vez de toparse con un 404.
+ * Un cliente viejo no la manda y la línea se queda con la colocación.
+ */
+function conPrenda(linea: Record<string, any>, lado: string) {
+	const archivos = Array.isArray(linea.archivos) ? linea.archivos : [];
+	return archivos.some(
+		(a: any) => String(a?.lado) === lado && a?.conPrenda === true,
+	);
+}
+
 function medidaRealDelArchivo(
 	linea: Record<string, any>,
 	lado: string,
@@ -273,6 +289,7 @@ export function aPartida(
 				 * costaría una llamada a S3 por lado y por pedido.
 				 */
 				prenda: `/medios/pedidos/${pedidoId}/${partidaId}-${lado}-prenda.png`,
+				...(conPrenda(linea, lado) ? { conPrenda: true } : {}),
 				/** El MISMO arte en trazos, para lo que se graba en vez de imprimirse. */
 				vector: `/medios/pedidos/${pedidoId}/${partidaId}-${lado}-vector.svg`,
 				/**
