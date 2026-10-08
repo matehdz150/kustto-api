@@ -98,6 +98,14 @@ export const trabajosDeBordado = pgTable(
 		claveEntrada: text("clave_entrada").notNull(),
 		/** El sha256 de cada artefacto, para poder comprobar lo que se subió. */
 		hashes: jsonb(),
+		/**
+		 * V6.9.2: lo que el previsualizador del editor ya puede enseñar mientras
+		 * el trabajo sigue —la forma en colores de hilo, las puntadas del primer
+		 * cosido y el bordado definitivo—, con la clave de cada imagen bajo el
+		 * mismo prefijo que los artefactos y cuándo quedó lista. Se va llenando
+		 * durante el trabajo; `null` hasta la primera.
+		 */
+		etapas: jsonb(),
 
 		/** Por qué falló, cuando falló. `ENGINE_TIMEOUT` no es lo mismo que el resto. */
 		codigoError: text("codigo_error"),
