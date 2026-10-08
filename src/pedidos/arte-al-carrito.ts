@@ -47,12 +47,16 @@ export async function copiarArteDePedido(
 		);
 		if (!hay) continue;
 
-		for (const extra of ["colocacion", "prenda"]) {
-			await almacen.copiar(
-				`medios/pedidos/${pedidoId}/${lineaId}-${lado}-${extra}.png`,
-				`carritos/${carritoId}/${lado}-${extra}.png`,
-			);
-		}
+		await almacen.copiar(
+			`medios/pedidos/${pedidoId}/${lineaId}-${lado}-colocacion.png`,
+			`carritos/${carritoId}/${lado}-colocacion.png`,
+		);
+		/* Si la foto real con el diseño llegó, el lado lo dice: es la imagen que
+		   enseña el pedido que salga de aquí (ver `vistaDeLinea`). */
+		const conPrenda = await almacen.copiar(
+			`medios/pedidos/${pedidoId}/${lineaId}-${lado}-prenda.png`,
+			`carritos/${carritoId}/${lado}-prenda.png`,
+		);
 
 		/* Los PÍXELES del archivo, no los centímetros del área: el área se
 		   relee del producto al pedir —puede haber cambiado— pero el tamaño
@@ -62,6 +66,7 @@ export async function copiarArteDePedido(
 			anchoPx: Math.trunc(Number(a?.anchoPx ?? 0)),
 			altoPx: Math.trunc(Number(a?.altoPx ?? 0)),
 			dpi: Math.trunc(Number(a?.dpi ?? 0)) || 300,
+			...(conPrenda ? { conPrenda: true } : {}),
 		});
 	}
 

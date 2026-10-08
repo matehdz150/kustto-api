@@ -9,13 +9,36 @@
 KUSTTO_EC2="${KUSTTO_EC2:-ec2-user@18.224.9.133}"
 KUSTTO_RDS_HOST="${KUSTTO_RDS_HOST:-kustto-prod-db.cr0ameawq3pa.us-east-2.rds.amazonaws.com}"
 KUSTTO_TUNEL_PUERTO="${KUSTTO_TUNEL_PUERTO:-15432}"
-KUSTTO_PEM="${KUSTTO_PEM:-../kustto-infra/Mac-Book-mateo-kustto.pem}"
+
+# LA LLAVE DEL EC2: la variable KUSTTO_PEM si viene en el entorno, luego la de
+# `.env` (estos scripts no cargan el .env entero), y si no, la primera `.pem`
+# que haya en la raíz del repo o en ../kustto-infra. Se busca al cargar este
+# archivo y no al abrir el túnel: así `lector.sh` falla ANTES de pedir la
+# contraseña de postgres, no después.
+if [ -z "${KUSTTO_PEM:-}" ] && [ -f .env ]; then
+	KUSTTO_PEM=$(grep '^KUSTTO_PEM=' .env | cut -d= -f2- || true)
+fi
+if [ -z "${KUSTTO_PEM:-}" ]; then
+	for candidata in ./*.pem ../kustto-infra/*.pem; do
+		if [ -f "$candidata" ]; then
+			KUSTTO_PEM="$candidata"
+			break
+		fi
+	done
+fi
+if [ -z "${KUSTTO_PEM:-}" ] || [ ! -r "$KUSTTO_PEM" ]; then
+	echo "No encuentro la llave del EC2 (.pem). Ponla en la raíz de kustto-api" >&2
+	echo "o escribe su ruta en .env como KUSTTO_PEM=/ruta/a/la/llave.pem" >&2
+	exit 1
+fi
+# ssh rechaza una llave que otros usuarios pueden leer ("UNPROTECTED PRIVATE KEY").
+if [ -n "$(find "$KUSTTO_PEM" \( -perm -040 -o -perm -004 \) 2>/dev/null)" ]; then
+	echo "==> La llave $KUSTTO_PEM la podían leer otros usuarios: la dejo en 600"
+	chmod 600 "$KUSTTO_PEM"
+fi
+echo "==> Llave del EC2: $KUSTTO_PEM"
 
 abrir_tunel() {
-	if [ ! -r "$KUSTTO_PEM" ]; then
-		echo "No encuentro la llave del EC2 en $KUSTTO_PEM (ponla en KUSTTO_PEM)." >&2
-		exit 1
-	fi
 	ssh -i "$KUSTTO_PEM" -o ExitOnForwardFailure=yes -o ServerAliveInterval=30 \
 		-N -L "${KUSTTO_TUNEL_PUERTO}:${KUSTTO_RDS_HOST}:5432" "$KUSTTO_EC2" &
 	TUNEL_PID=$!

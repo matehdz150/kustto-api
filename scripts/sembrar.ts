@@ -605,9 +605,12 @@ async function principal() {
 				artePorTaller.set(taller, [...(artePorTaller.get(taller) ?? []), a]);
 			}
 			const talleresConArte = [...artePorTaller.keys()];
+			/* Sin arte no se inventan pedidos, pero el catálogo SÍ se siembra:
+			   producción puede no tener todavía ningún pedido de sus productos
+			   activos, y eso no debe dejar la base local vacía. */
 			if (talleresConArte.length === 0)
-				throw new Error(
-					"semilla/catalogo.json no trae arte de pedidos para productos activos",
+				console.warn(
+					"semilla/catalogo.json no trae arte de pedidos para productos activos: siembro el catálogo sin pedidos de prueba.",
 				);
 
 			const folios = new Set<string>();
@@ -619,9 +622,12 @@ async function principal() {
 				return f;
 			};
 
-			const plan = REPARTO.flatMap((x) =>
-				Array.from({ length: x.cuantos }, () => x),
-			).slice(0, COMPRAS);
+			const plan =
+				talleresConArte.length === 0
+					? []
+					: REPARTO.flatMap((x) =>
+							Array.from({ length: x.cuantos }, () => x),
+						).slice(0, COMPRAS);
 
 			for (const [n, paso] of plan.entries()) {
 				const creado = hace(entre(paso.dias[0], paso.dias[1]), entre(0, 20));

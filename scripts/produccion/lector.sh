@@ -17,6 +17,26 @@ set -euo pipefail
 cd "$(dirname "$0")/../.."
 source scripts/produccion/tunel.sh
 
+# `psql` hacia el túnel. Si no está instalado en esta máquina, usa el del
+# contenedor de Postgres local (docker compose): desde el contenedor, el
+# `localhost` de la máquina es `host.docker.internal`. Se revisa ANTES de pedir
+# la contraseña, para no pedirla en balde.
+if command -v psql >/dev/null 2>&1; then
+	psql_produccion() { psql -h localhost "$@"; }
+else
+	CONTENEDOR_PG=$(docker compose ps -q postgres 2>/dev/null || true)
+	if [ -z "$CONTENEDOR_PG" ]; then
+		echo "No hay psql en esta máquina ni el contenedor de Postgres está corriendo." >&2
+		echo "Levántalo con 'docker compose up -d postgres' o instala psql: brew install libpq" >&2
+		exit 1
+	fi
+	echo "==> psql no está instalado: uso el del contenedor de Postgres local"
+	psql_produccion() {
+		docker exec -i -e PGPASSWORD -e PGSSLMODE "$CONTENEDOR_PG" \
+			psql -h host.docker.internal "$@"
+	}
+fi
+
 CLAVE=$(openssl rand -hex 24)
 
 read -r -s -p "Contraseña del usuario maestro 'postgres' de la base de producción: " MAESTRA
@@ -25,7 +45,7 @@ echo
 abrir_tunel
 
 echo "==> Creando el usuario kustto_lectura"
-PGPASSWORD="$MAESTRA" PGSSLMODE=require psql -h localhost -p "$KUSTTO_TUNEL_PUERTO" \
+PGPASSWORD="$MAESTRA" PGSSLMODE=require psql_produccion -p "$KUSTTO_TUNEL_PUERTO" \
 	-U postgres -d kustto -v ON_ERROR_STOP=1 -q -v clave="$CLAVE" <<'SQL'
 SELECT 'CREATE ROLE kustto_lectura LOGIN'
 WHERE NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'kustto_lectura')\gexec

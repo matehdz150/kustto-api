@@ -15,6 +15,7 @@ import { copiarArteDePedido } from "./arte-al-carrito";
 import { aPesos } from "./dominio";
 import { claveDeVariante } from "./lineas";
 import { PedidosService } from "./pedidos.service";
+import { vistaDeLinea } from "./vista-de-linea";
 import { paraComprador } from "./vistas";
 
 @Injectable()
@@ -215,9 +216,7 @@ export class PedidosCompradorService {
 			tallas: l.tallas,
 			piezas,
 			diseno: l.disenoRuta,
-			miniatura:
-				(l.arte as { colocacion?: string }[] | null)?.[0]?.colocacion ??
-				l.imagenUrl,
+			miniatura: vistaDeLinea(l.arte, l.imagenUrl),
 			importeAntes: Number(l.importe),
 			diasAntes: l.diasPrometidos,
 		};

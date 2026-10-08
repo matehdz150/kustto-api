@@ -47,6 +47,16 @@ function urlPublica(ruta: string) {
 
 const comprobadas = new Map<string, Promise<boolean>>();
 
+/**
+ * Por qué falló cada comprobación que NO respondió el servidor (red, TLS). Si
+ * todas fallan así, el problema es la red y no las imágenes: un firewall que
+ * intercepta el HTTPS (pasó con un Fortinet en una oficina) hace que cada
+ * imagen "falte", el catálogo sale vacío y `traer.sh` vaciaría la base local
+ * para sembrarla con nada.
+ */
+const fallasDeRed: string[] = [];
+let respondidas = 0;
+
 /** Si el objeto está en el bucket. Una ruta que no es nuestra se da por buena. */
 function existe(ruta: string | null | undefined): Promise<boolean> {
 	if (!ruta) return Promise.resolve(true);
@@ -56,10 +66,15 @@ function existe(ruta: string | null | undefined): Promise<boolean> {
 	if (!pendiente) {
 		pendiente = fetch(url)
 			.then(async (r) => {
+				respondidas++;
 				await r.body?.cancel();
 				return r.ok;
 			})
-			.catch(() => false);
+			.catch((error: Error) => {
+				const causa = (error.cause as Error | undefined)?.message;
+				fallasDeRed.push(causa ?? error.message);
+				return false;
+			});
 		comprobadas.set(url, pendiente);
 	}
 	return pendiente;
@@ -353,6 +368,15 @@ async function principal() {
 				continue;
 			}
 			arte.push(a);
+		}
+
+		if (respondidas === 0 && fallasDeRed.length > 0) {
+			throw new Error(
+				`No pude comprobar ninguna imagen en ${API}: ${fallasDeRed[0]}.\n` +
+					"Es la red, no las imágenes (¿un firewall que intercepta el HTTPS?). " +
+					"No escribí semilla/catalogo.json ni toqué tu base local. " +
+					"Prueba desde otra red (en casa o con el teléfono).",
+			);
 		}
 
 		await mkdir("semilla", { recursive: true });
