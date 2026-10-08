@@ -6,7 +6,7 @@ import {
 	Injectable,
 	NotFoundException,
 } from "@nestjs/common";
-import { and, count, desc, eq } from "drizzle-orm";
+import { and, count, desc, eq, inArray } from "drizzle-orm";
 import { AlmacenService } from "../almacen/almacen.service";
 import type { Identidad } from "../auth/identidad";
 import { correoDe, idOrdenable } from "../cuenta/comun";
@@ -78,11 +78,29 @@ export class EventosService {
 			.where(eq(e.eventos.compradorId, quien.sub))
 			.orderBy(desc(e.eventos.creadoEn));
 
-		const productos = await productosDe(
-			this.db,
-			filas.map((f) => f.id),
-		);
-		return filas.map((f) => vistaDeEvento(f, productos.get(f.id) ?? []));
+		const ids = filas.map((f) => f.id);
+		const [productos, conteos] = await Promise.all([
+			productosDe(this.db, ids),
+			/* Cuántos han pedido en cada evento: es lo que el organizador mira
+			   en la lista. Un conteo agrupado, no las participaciones enteras,
+			   que sólo hacen falta al abrir uno. */
+			ids.length
+				? this.db
+						.select({
+							eventoId: e.eventoParticipaciones.eventoId,
+							n: count(),
+						})
+						.from(e.eventoParticipaciones)
+						.where(inArray(e.eventoParticipaciones.eventoId, ids))
+						.groupBy(e.eventoParticipaciones.eventoId)
+				: Promise.resolve([]),
+		]);
+		const pedidos = new Map(conteos.map((c) => [c.eventoId, Number(c.n)]));
+
+		return filas.map((f) => ({
+			...vistaDeEvento(f, productos.get(f.id) ?? []),
+			participantes: pedidos.get(f.id) ?? 0,
+		}));
 	}
 
 	async obtener(quien: Identidad, id: string) {

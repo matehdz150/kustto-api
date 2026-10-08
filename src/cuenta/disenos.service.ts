@@ -9,11 +9,47 @@ import { AlmacenService } from "../almacen/almacen.service";
 import type { Identidad } from "../auth/identidad";
 import { DB, type Db } from "../db/db.module";
 import * as e from "../db/esquema";
-import { vistaDeLinea } from "../pedidos/vista-de-linea";
 import { correoDe, idOrdenable } from "./comun";
 import { PerfilService } from "./perfil.service";
 
 const MAX_NOMBRE = 60;
+
+/**
+ * Lo que se guarda en `lienzo` además de la ruta.
+ *
+ * VA EN EL JSON Y NO EN COLUMNAS: son datos congelados de la línea de la que
+ * salió el diseño, que nadie filtra ni ordena, y la tabla ya tiene filas
+ * guardadas sin ellos. Las viejas los traen en null y la web lo aguanta.
+ */
+type Lienzo = {
+	ruta?: string;
+	origen?: { pedidoId: string; lineaId: string };
+	colorPrenda?: string | null;
+	lados?: string[];
+};
+
+/**
+ * La forma que lee la web (`DisenoGuardado`).
+ *
+ * Antes se devolvía la fila tal cual y la página de diseños tronaba en cuanto
+ * había uno guardado: buscaba `origen`, `producto` y `miniatura`, que la fila
+ * no tiene con esos nombres.
+ */
+function aVista(fila: typeof e.disenos.$inferSelect, producto: string | null) {
+	const lienzo = (fila.lienzo ?? {}) as Lienzo;
+	return {
+		id: fila.id,
+		nombre: fila.nombre,
+		productoId: fila.productoId,
+		producto,
+		colorPrenda: lienzo.colorPrenda ?? null,
+		lados: Array.isArray(lienzo.lados) ? lienzo.lados : [],
+		diseno: lienzo.ruta ?? null,
+		miniatura: fila.vistaPreviaUrl,
+		origen: lienzo.origen ?? null,
+		creadoEn: fila.creadoEn,
+	};
+}
 /** Un tope alto pero real: sin él, un bucle deja la cuenta inservible. */
 const MAXIMOS = 200;
 
@@ -39,11 +75,25 @@ export class DisenosService {
 	async listar(quien: Identidad) {
 		correoDe(quien);
 
-		return this.db
-			.select()
+		const filas = await this.db
+			.select({ diseno: e.disenos, producto: e.productos.nombre })
 			.from(e.disenos)
+			.leftJoin(e.productos, eq(e.productos.id, e.disenos.productoId))
 			.where(eq(e.disenos.compradorId, quien.sub))
 			.orderBy(desc(e.disenos.creadoEn));
+
+		return filas.map((f) => aVista(f.diseno, f.producto));
+	}
+
+	private async uno(quien: Identidad, id: string) {
+		const [f] = await this.db
+			.select({ diseno: e.disenos, producto: e.productos.nombre })
+			.from(e.disenos)
+			.leftJoin(e.productos, eq(e.productos.id, e.disenos.productoId))
+			.where(and(eq(e.disenos.id, id), eq(e.disenos.compradorId, quien.sub)))
+			.limit(1);
+		if (!f) throw new NotFoundException("No encontramos ese diseño");
+		return aVista(f.diseno, f.producto);
 	}
 
 	/**
@@ -104,10 +154,14 @@ export class DisenosService {
 			);
 		}
 
-		/* La miniatura es la prenda con el diseño, nunca el arte suelto: el arte
-		   va recortado y transparente, y en pequeño no se reconoce. La foto real
-		   si la hay, si no la colocación. Que falte sólo significa que se ve peor. */
-		const vista = vistaDeLinea(partida.arte);
+		/* La miniatura es la FOTO REAL de la prenda con el diseño, y sólo esa. Ni
+		   el arte suelto (recortado y transparente, en pequeño no se reconoce) ni
+		   la colocación sobre el mockup, que es un dibujo plano y no se parece a
+		   lo que llega. Sin foto real la web enseña la foto del producto. */
+		const vista =
+			(partida.arte as { prenda?: string; conPrenda?: boolean }[]).find(
+				(a) => a.conPrenda && a.prenda,
+			)?.prenda ?? null;
 		const miniatura = vista
 			? (await this.almacen.copiar(
 					vista.replace(/^\//, ""),
@@ -126,12 +180,17 @@ export class DisenosService {
 				compradorId: quien.sub,
 				productoId: partida.productoId,
 				nombre,
-				lienzo: { ruta: `/${base}.json` },
+				lienzo: {
+					ruta: `/${base}.json`,
+					origen: { pedidoId, lineaId },
+					colorPrenda: partida.color,
+					lados: (partida.lados as string[]) ?? [],
+				} satisfies Lienzo,
 				vistaPreviaUrl: miniatura,
 			})
 			.returning();
 
-		return fila;
+		return this.uno(quien, fila.id);
 	}
 
 	async renombrar(quien: Identidad, id: string, cuerpo: Record<string, any>) {
@@ -152,7 +211,7 @@ export class DisenosService {
 			.returning();
 
 		if (!fila) throw new NotFoundException("No encontramos ese diseño");
-		return fila;
+		return this.uno(quien, fila.id);
 	}
 
 	/**
