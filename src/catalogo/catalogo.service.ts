@@ -1,5 +1,5 @@
 import { Inject, Injectable, NotFoundException } from "@nestjs/common";
-import { and, asc, desc, eq, inArray } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, ne, sql } from "drizzle-orm";
 import { aSalida } from "../admin/categorias.service";
 import { DB, type Db } from "../db/db.module";
 import * as e from "../db/esquema";
@@ -22,8 +22,15 @@ export type Ficha = {
 	slug: string;
 	name: string;
 	description?: string;
-	images: { url: string; order: number }[];
+	/** `kind` dice qué enseña: `foto`, `recorte` (sin fondo), `detalle` o `ambiente`. */
+	images: { url: string; order: number; kind: string }[];
 	basePrice?: number;
+	/** El precio de antes, SÓLO si es mayor que `basePrice`: si no, no es un descuento. */
+	compareAtPrice?: number;
+	/** Qué ES el producto (playera, gorra…). Ver `tiposDeProducto`. */
+	type?: { id: string; name: string; slug: string; title: string | null };
+	/** Piezas pedidas en los últimos 30 días, sin contar pedidos cancelados. */
+	sales30d: number;
 	categoryIds: string[];
 	provider?: string;
 	technique?: string;
@@ -207,6 +214,8 @@ export class CatalogoService {
 			produccion,
 			categorias,
 			talleres,
+			tipos,
+			ventas,
 		] = await Promise.all([
 			this.db
 				.select()
@@ -246,6 +255,28 @@ export class CatalogoService {
 						...new Set(productos.map((p) => p.tallerId)),
 					]),
 				),
+			/* Los tipos son decenas, no miles: traerlos todos es una consulta
+			   barata y evita armar un `inArray` por una lista que casi nunca
+			   cambia. */
+			this.db.select().from(e.tiposDeProducto),
+			/* LO PEDIDO EN 30 DÍAS, de una vez para todos los productos. Los
+			   cancelados no cuentan: "más de 200 compras" no puede incluir
+			   pedidos que no se hicieron. */
+			this.db
+				.select({
+					productoId: e.pedidoPartidas.productoId,
+					piezas: sql<number>`coalesce(sum(${e.pedidoPartidas.piezas}), 0)::int`,
+				})
+				.from(e.pedidoPartidas)
+				.innerJoin(e.pedidos, eq(e.pedidos.id, e.pedidoPartidas.pedidoId))
+				.where(
+					and(
+						inArray(e.pedidoPartidas.productoId, ids),
+						ne(e.pedidos.estado, "cancelado"),
+						gte(e.pedidos.creadoEn, sql`now() - interval '30 days'`),
+					),
+				)
+				.groupBy(e.pedidoPartidas.productoId),
 		]);
 
 		const porProducto = <T extends { productoId: string }>(filas: T[]) => {
@@ -266,11 +297,15 @@ export class CatalogoService {
 		const precioDe = new Map(precios.map((p) => [p.productoId, p]));
 		const prodDe = new Map(produccion.map((p) => [p.productoId, p]));
 		const tallerDe = new Map(talleres.map((t) => [t.id, t.nombre]));
+		const tipoDe = new Map(tipos.map((t) => [t.id, t]));
+		const vendidasDe = new Map(ventas.map((v) => [v.productoId, v.piezas]));
 
 		return productos.map((p) => {
 			const precio = precioDe.get(p.id);
 			const prod = prodDe.get(p.id);
 			const taller = tallerDe.get(p.tallerId);
+			const tipo = p.tipoId ? tipoDe.get(p.tipoId) : undefined;
+			const antes = precio?.precioAntes ? Number(precio.precioAntes) : 0;
 
 			/* Se construye con `...(x ? {k:x} : {})` y no asignando `undefined`:
 			   `JSON.stringify` borra las claves con `undefined`, pero el tipo de
@@ -283,8 +318,25 @@ export class CatalogoService {
 				images: (imgs.get(p.id) ?? []).map((i) => ({
 					url: i.url,
 					order: i.orden,
+					kind: i.tipo,
 				})),
 				...(precio ? { basePrice: Number(precio.precioBase) } : {}),
+				/* Un "antes" igual o menor al precio no es un descuento: se omite
+				   en vez de enseñar un tachado que no tacha nada. */
+				...(precio && antes > Number(precio.precioBase)
+					? { compareAtPrice: antes }
+					: {}),
+				...(tipo
+					? {
+							type: {
+								id: tipo.id,
+								name: tipo.nombre,
+								slug: tipo.slug,
+								title: tipo.titulo,
+							},
+						}
+					: {}),
+				sales30d: vendidasDe.get(p.id) ?? 0,
 				categoryIds: (cats.get(p.id) ?? []).map((c) => c.categoriaId),
 				...(taller ? { provider: taller } : {}),
 				...(prod?.dias ? { productionDays: prod.dias } : {}),
@@ -313,6 +365,21 @@ export class CatalogoService {
 				templateId: p.plantillaId ?? "",
 			};
 		});
+	}
+
+	/** Los tipos de producto, para las pastillas de cada categoría. */
+	async tipos() {
+		const filas = await this.db
+			.select()
+			.from(e.tiposDeProducto)
+			.orderBy(asc(e.tiposDeProducto.orden), asc(e.tiposDeProducto.nombre));
+
+		return filas.map((t) => ({
+			id: t.id,
+			name: t.nombre,
+			slug: t.slug,
+			title: t.titulo,
+		}));
 	}
 
 	/** Las categorías, para los filtros y el menú. */

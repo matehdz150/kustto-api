@@ -40,6 +40,7 @@ export class CategoriasService {
 					? String(cuerpo.description).trim()
 					: null,
 				imagenUrl: imagen,
+				color: colorONulo(cuerpo.color),
 				slug: await this.slugLibre(nombre),
 			})
 			.returning();
@@ -67,6 +68,7 @@ export class CategoriasService {
 			if (!imagen) throw new BadRequestException("Falta la imagen");
 			cambios.imagenUrl = imagen;
 		}
+		if (cuerpo.color !== undefined) cambios.color = colorONulo(cuerpo.color);
 
 		/* El slug NO se regenera al renombrar. Es parte de una URL que puede
 		   estar compartida; cambiarlo rompería enlaces de fuera por un cambio de
@@ -146,6 +148,20 @@ export class CategoriasService {
 	}
 }
 
+/**
+ * El color de una categoría, o `null` si no viene. Tiene que ser `#rrggbb`: se
+ * pinta tal cual en un `style`, y una cadena libre ahí es CSS que alguien más
+ * escribió.
+ */
+function colorONulo(valor: unknown) {
+	if (valor === undefined || valor === null || valor === "") return null;
+	const color = String(valor).trim();
+	if (!/^#[0-9a-fA-F]{6}$/.test(color)) {
+		throw new BadRequestException("El color va como #rrggbb");
+	}
+	return color.toLowerCase();
+}
+
 /** En inglés porque es lo que el backoffice y el catálogo ya leen. */
 /**
  * La categoría con los nombres que lee el front (`name`, `image`…).
@@ -160,6 +176,7 @@ export function aSalida(fila: typeof e.categorias.$inferSelect) {
 		slug: fila.slug,
 		description: fila.descripcion,
 		image: fila.imagenUrl,
+		color: fila.color,
 		createdAt: fila.creadoEn.toISOString(),
 	};
 }

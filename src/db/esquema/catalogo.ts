@@ -13,7 +13,7 @@ import {
 	uniqueIndex,
 	uuid,
 } from "drizzle-orm/pg-core";
-import { estadoProducto, marcas } from "./comun";
+import { estadoProducto, marcas, tipoImagenProducto } from "./comun";
 import { talleres } from "./talleres";
 
 export const categorias = pgTable(
@@ -30,10 +30,38 @@ export const categorias = pgTable(
 		slug: text().notNull(),
 		descripcion: text(),
 		imagenUrl: text("imagen_url"),
+		/* El color del cuadro de la categoría en la tienda (`#a8505f`). Lo elige
+		   quien administra, no el diseño: sin él la categoría se pinta en gris. */
+		color: text(),
 		orden: integer().notNull().default(0),
 		...marcas,
 	},
 	(t) => [uniqueIndex("categorias_slug_unico").on(t.slug)],
+);
+
+/**
+ * Qué ES un producto: playera, gorra, termo, taza…
+ *
+ * NO SON CATEGORÍAS HIJAS, y es lo que se probó primero y no sirve: "Playeras"
+ * se muestra dentro de Eventos, de Ropa y de Regalos, "Gorras" dentro de
+ * cuatro. Una categoría tiene `slug` único, así que habría que repetirla por
+ * cada padre. Un producto tiene UN tipo y VARIAS categorías, y las pastillas
+ * de una categoría salen de los tipos que de verdad tienen productos en ella.
+ *
+ * `titulo` es lo que va de encabezado de la pantalla cuando el nombre de la
+ * pastilla queda corto ("Lisas" -> "Playeras lisas").
+ */
+export const tiposDeProducto = pgTable(
+	"tipos_de_producto",
+	{
+		id: uuid().primaryKey().defaultRandom(),
+		nombre: text().notNull(),
+		slug: text().notNull(),
+		titulo: text(),
+		orden: integer().notNull().default(0),
+		...marcas,
+	},
+	(t) => [uniqueIndex("tipos_de_producto_slug_unico").on(t.slug)],
 );
 
 /**
@@ -101,6 +129,11 @@ export const productos = pgTable(
 		plantillaId: text("plantilla_id").references(() => plantillasDePrenda.id, {
 			onDelete: "set null",
 		}),
+		/* Opcional: los productos que ya existían no lo tienen, y un tipo
+		   borrado no debe llevarse el producto con él. */
+		tipoId: uuid("tipo_id").references(() => tiposDeProducto.id, {
+			onDelete: "set null",
+		}),
 		personalizable: boolean().notNull().default(true),
 		/** Debajo de esto, el panel del taller avisa de que se está acabando. */
 		minimoAlerta: integer("minimo_alerta"),
@@ -129,6 +162,7 @@ export const productos = pgTable(
 		index("productos_taller_creado").on(t.tallerId, t.creadoEn),
 		/** El catálogo público y la cola de revisión (era gsi2). */
 		index("productos_estado_actualizado").on(t.estado, t.actualizadoEn),
+		index("productos_tipo").on(t.tipoId),
 	],
 );
 
@@ -156,6 +190,8 @@ export const productoImagenes = pgTable(
 			.notNull()
 			.references(() => productos.id, { onDelete: "cascade" }),
 		url: text().notNull(),
+		/* Las que ya existían son `foto`. Ver `tipoImagenProducto`. */
+		tipo: tipoImagenProducto().notNull().default("foto"),
 		orden: integer().notNull().default(0),
 	},
 	(t) => [index("producto_imagenes_producto").on(t.productoId, t.orden)],
@@ -266,6 +302,10 @@ export const productoPrecios = pgTable("producto_precios", {
 		.notNull()
 		.default("0"),
 	precioPorLado: numeric("precio_por_lado", { precision: 10, scale: 2 }),
+	/* El precio de antes, tachado junto al actual. Sólo cuenta si es MAYOR que
+	   el base: uno menor o igual no es un descuento y no se enseña. Es el que
+	   pone el taller; el descuento de un paquete va aparte, en `paquetes`. */
+	precioAntes: numeric("precio_antes", { precision: 10, scale: 2 }),
 });
 
 export const productoProduccion = pgTable("producto_produccion", {
