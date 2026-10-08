@@ -13,6 +13,8 @@
 		"db:desde-dynamo": "tsx scripts/desde-dynamo.ts",
 		"db:exportar-semilla": "node --env-file=.env --import tsx scripts/exportar-semilla.ts",
 		"db:sembrar": "node --env-file=.env --import tsx scripts/sembrar.ts",
+		"db:crear-lector": "bash scripts/produccion/lector.sh",
+		"db:traer-produccion": "bash scripts/produccion/traer.sh",
 		"auth:llave": "tsx scripts/generar-llave-jwt.ts",
 		"auth:crear-admin": "tsc -p tsconfig.scripts.json && node --env-file=.env dist-scripts/scripts/crear-admin.js",
 		"auth:invitar-migrados": "tsc -p tsconfig.scripts.json && node --env-file=.env dist-scripts/scripts/invitar-cuentas-migradas.js",

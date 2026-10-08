@@ -10,11 +10,14 @@
  *
  * QUÉ SIEMBRA
  *
- *   - Un admin, tres talleres y un comprador, todos con correo `@kustto.test`
- *     (un dominio reservado: nunca le llega un correo a nadie de verdad).
+ *   - Un admin, los talleres y un comprador, todos con correo `@kustto.test`
+ *     (un dominio reservado: nunca le llega un correo a nadie de verdad). Si
+ *     la semilla trae talleres (los de producción, sólo su parte pública), se
+ *     crean ésos con su nombre y su slug; si no, los tres de abajo.
  *   - El catálogo de `semilla/catalogo.json` (lo escribe `db:exportar-semilla`):
- *     plantillas, categorías y productos con sus imágenes, lados, tallas,
- *     precios y fotos reales. Las rutas apuntan a objetos que EXISTEN en el
+ *     plantillas, categorías, tipos, productos con sus imágenes (y su tipo:
+ *     foto, recorte…), lados, tallas, precios (con el de antes) y fotos
+ *     reales, y los paquetes con sus categorías. Las rutas apuntan a objetos que EXISTEN en el
  *     bucket; el exportador las comprobó una por una.
  *   - Compras y pedidos en todos los estados, con su bitácora, con
  *     compradores y direcciones inventados pero con ARTE REAL: cada partida
@@ -238,6 +241,8 @@ const REPARTO: { estado: Estado; cuantos: number; dias: [number, number] }[] = [
 type Fila = Record<string, unknown>;
 type ProductoExportado = Fila & {
 	id: string;
+	/** De qué taller es. Las semillas viejas no lo traen. */
+	taller_id?: string;
 	nombre: string;
 	estado: (typeof e.estadoProducto.enumValues)[number];
 	imagenes: Fila[];
@@ -259,9 +264,34 @@ type Catalogo = {
 		descripcion: string | null;
 		imagenUrl: string | null;
 		orden: number;
+		color?: string | null;
 	}[];
 	productos: ProductoExportado[];
 	arte: Fila[];
+	/* Lo de abajo lo agregó la tienda nueva; una semilla vieja no lo trae. */
+	tipos?: {
+		id: string;
+		nombre: string;
+		slug: string;
+		titulo: string | null;
+		orden: number;
+	}[];
+	talleres?: {
+		id: string;
+		nombre: string;
+		slug: string;
+		nombre_publico: string | null;
+		bio: string | null;
+		avatar_url: string | null;
+		banner_url: string | null;
+	}[];
+	categoriasPaquete?: Fila[];
+	paquetes?: (Fila & {
+		id: string;
+		taller_id: string;
+		productos: Fila[];
+		categorias: string[];
+	})[];
 };
 
 const num = (v: unknown) => (v == null ? null : Number(v));
@@ -303,6 +333,39 @@ async function principal() {
 			console.log(`Base vaciada (${tablas.rowCount} tablas).`);
 		}
 
+		/* Los talleres: los de la semilla (con su nombre y su slug, y el contacto
+		   inventado) o, si no trae, los tres de siempre. El contacto y la
+		   recolección se toman en orden de `TALLERES`; el tercero no recoge. */
+		const talleresSembrados = catalogo.talleres?.length
+			? catalogo.talleres.map((t, i) => {
+					const molde = TALLERES[i % TALLERES.length];
+					return {
+						id: t.id,
+						correo: `${t.slug}@kustto.test`,
+						nombre: t.nombre,
+						nombrePublico: t.nombre_publico ?? t.nombre,
+						slug: t.slug,
+						bio: t.bio,
+						avatarUrl: t.avatar_url,
+						bannerUrl: t.banner_url,
+						whatsapp: molde.whatsapp,
+						recoleccion: molde.recoleccion,
+					};
+				})
+			: TALLERES.map((t) => ({
+					id: idDe(t.correo),
+					correo: t.correo,
+					nombre: t.nombre,
+					nombrePublico: t.nombre,
+					slug: t.slug,
+					bio: t.bio,
+					avatarUrl: null,
+					bannerUrl: null,
+					whatsapp: t.whatsapp,
+					recoleccion: t.recoleccion,
+				}));
+		const idsDeTaller = new Set(talleresSembrados.map((t) => t.id));
+
 		const hash = await hashear(CONTRASENA);
 		const verificado = hace(60);
 
@@ -316,26 +379,16 @@ async function principal() {
 				correoVerificadoEn: verificado,
 			});
 
-			for (const t of TALLERES) {
+			for (const t of talleresSembrados) {
 				/* El taller y su cuenta comparten id, como en `TalleresService.crear`. */
-				const id = idDe(t.correo);
 				await tx.insert(e.usuarios).values({
-					id,
+					id: t.id,
 					tipo: "taller",
 					correo: t.correo,
 					contrasenaHash: hash,
 					correoVerificadoEn: verificado,
 				});
-				await tx.insert(e.talleres).values({
-					id,
-					correo: t.correo,
-					nombre: t.nombre,
-					nombrePublico: t.nombre,
-					slug: t.slug,
-					bio: t.bio,
-					whatsapp: t.whatsapp,
-					recoleccion: t.recoleccion,
-				});
+				await tx.insert(e.talleres).values(t);
 			}
 
 			const idComprador = idDe(COMPRADOR.correo);
@@ -359,18 +412,29 @@ async function principal() {
 			});
 
 			/* ─── Catálogo ───────────────────────────────────────────────── */
+			/* Las migraciones ya dejan categorías, tipos y categorías de paquete
+			   en una base recién migrada, con otros ids: se cambian por los de la semilla, que son
+			   a los que apuntan sus productos. Todavía no hay productos (se
+			   comprobó arriba), así que no se rompe nada. */
+			await tx.delete(e.tiposDeProducto);
+			await tx.delete(e.categorias);
+			await tx.delete(e.categoriasPaquete);
+			if (catalogo.tipos?.length)
+				await tx.insert(e.tiposDeProducto).values(catalogo.tipos);
 			if (catalogo.plantillas.length)
 				await tx.insert(e.plantillasDePrenda).values(catalogo.plantillas);
 			if (catalogo.categorias.length)
 				await tx.insert(e.categorias).values(catalogo.categorias);
 
-			/* Los productos se reparten entre los talleres en orden: el primero
-			   al primero, el segundo al segundo… Así cada taller tiene algo que
-			   vender y, con el catálogo de hoy, algo con arte para sus pedidos. */
+			/* Cada producto se queda con su taller si la semilla lo dice. Si no
+			   (semilla vieja), se reparten en orden entre los talleres: así cada
+			   uno tiene algo que vender y algo con arte para sus pedidos. */
 			const dueno = new Map(
 				catalogo.productos.map((p, i) => [
 					p.id,
-					idDe(TALLERES[i % TALLERES.length].correo),
+					p.taller_id && idsDeTaller.has(p.taller_id)
+						? p.taller_id
+						: talleresSembrados[i % talleresSembrados.length].id,
 				]),
 			);
 
@@ -378,6 +442,7 @@ async function principal() {
 				await tx.insert(e.productos).values({
 					id: p.id,
 					tallerId: dueno.get(p.id) as string,
+					tipoId: texto(p.tipo_id),
 					nombre: p.nombre,
 					nombreInterno: texto(p.nombre_interno),
 					sku: texto(p.sku),
@@ -400,6 +465,11 @@ async function principal() {
 							...de,
 							url: String(i.url),
 							orden: Number(i.orden),
+							...(i.tipo
+								? {
+										tipo: i.tipo as (typeof e.tipoImagenProducto.enumValues)[number],
+									}
+								: {}),
 						})),
 					);
 				if (p.colores.length)
@@ -440,6 +510,7 @@ async function principal() {
 						...de,
 						precioBase: String(p.precio.precio_base),
 						precioPorLado: texto(p.precio.precio_por_lado),
+						precioAntes: texto(p.precio.precio_antes),
 					});
 				if (p.produccion)
 					await tx.insert(e.productoProduccion).values({
@@ -474,6 +545,50 @@ async function principal() {
 						.values(
 							p.categorias.map((categoriaId) => ({ ...de, categoriaId })),
 						);
+			}
+
+			/* ─── Paquetes ───────────────────────────────────────────────── */
+			if (catalogo.categoriasPaquete?.length)
+				await tx.insert(e.categoriasPaquete).values(
+					catalogo.categoriasPaquete.map((c) => ({
+						id: String(c.id),
+						nombre: String(c.nombre),
+						slug: String(c.slug),
+						descripcion: texto(c.descripcion),
+						orden: Number(c.orden ?? 0),
+						activa: c.activa !== false,
+						banner: (c.banner ?? null) as never,
+					})),
+				);
+			for (const p of catalogo.paquetes ?? []) {
+				if (!idsDeTaller.has(p.taller_id)) continue;
+				await tx.insert(e.paquetes).values({
+					id: p.id,
+					tallerId: p.taller_id,
+					nombre: String(p.nombre),
+					descripcion: texto(p.descripcion),
+					precioBase: String(p.precio_base),
+					descuentoPorcentaje: Number(p.descuento_porcentaje ?? 0),
+					version: Number(p.version ?? 1),
+					estado: p.estado as (typeof e.estadoPaquete.enumValues)[number],
+					notaRevision: texto(p.nota_revision),
+				});
+				if (p.productos.length)
+					await tx.insert(e.paqueteProductos).values(
+						p.productos.map((x) => ({
+							paqueteId: p.id,
+							productoId: String(x.producto_id),
+							cantidad: Number(x.cantidad ?? 1),
+							orden: Number(x.orden ?? 0),
+						})),
+					);
+				if (p.categorias.length)
+					await tx.insert(e.paqueteCategorias).values(
+						p.categorias.map((categoriaId) => ({
+							paqueteId: p.id,
+							categoriaId,
+						})),
+					);
 			}
 
 			/* ─── Pedidos ────────────────────────────────────────────────── */
@@ -538,7 +653,7 @@ async function principal() {
 				const pedidosDeLaCompra = [];
 
 				for (const [i, tallerId] of talleres.entries()) {
-					const taller = TALLERES.find((t) => idDe(t.correo) === tallerId);
+					const taller = talleresSembrados.find((t) => t.id === tallerId);
 					/* Un taller sin recolección no puede enviar: todo lo suyo es para
 					   recoger, igual que en el checkout de verdad. */
 					const conEnvio = Boolean(taller?.recoleccion) && r() < 0.75;
@@ -774,7 +889,7 @@ async function principal() {
 				"",
 				`Contraseña de todas las cuentas: ${CONTRASENA}`,
 				`  admin      ${ADMIN.correo}          → /admin/entrar`,
-				...TALLERES.map(
+				...talleresSembrados.map(
 					(t) => `  taller     ${t.correo.padEnd(26)} → /proveedor/login`,
 				),
 				`  comprador  ${COMPRADOR.correo}      → /cuenta/entrar`,
