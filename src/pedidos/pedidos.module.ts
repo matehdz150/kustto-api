@@ -7,6 +7,7 @@ import {
 import { PedidosService } from "./pedidos.service";
 import { PedidosCompradorService } from "./pedidos-comprador.service";
 import { PedidosTallerService } from "./pedidos-taller.service";
+import { RastreoService } from "./rastreo.service";
 
 @Module({
 	controllers: [
@@ -14,7 +15,12 @@ import { PedidosTallerService } from "./pedidos-taller.service";
 		PedidosTallerController,
 		PedidosCompradorController,
 	],
-	providers: [PedidosService, PedidosTallerService, PedidosCompradorService],
+	providers: [
+		PedidosService,
+		PedidosTallerService,
+		PedidosCompradorService,
+		RastreoService,
+	],
 	exports: [PedidosService],
 })
 export class PedidosModule {}

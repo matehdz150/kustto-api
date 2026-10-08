@@ -1,0 +1,1 @@
+ALTER TABLE "trabajos_de_bordado" ADD COLUMN "etapas" jsonb;

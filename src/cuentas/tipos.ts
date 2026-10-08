@@ -51,5 +51,20 @@ export const cookieDeAcceso = (tipo: TipoDeUsuario) => `kustto_acceso_${tipo}`;
 export const cookieDeRenovacion = (tipo: TipoDeUsuario) =>
 	`kustto_renovacion_${tipo}`;
 
+/**
+ * La cookie que sólo dice "en este navegador hay una sesión". NO es la sesión.
+ *
+ * Existe porque el servidor de Next no puede saber si alguien entró: la de
+ * acceso dura 15 minutos y la de renovación sólo viaja a `/auth/<tipo>`. Con
+ * esta, que dura lo que la renovación, el servidor elige el marco de la tienda
+ * (header o riel) en la primera pintura en vez de parpadear.
+ *
+ * NO LLEVA NADA DENTRO —un `1`— y NO es `httpOnly` a propósito: la tiene que
+ * leer el servidor de Next y el navegador. Nadie puede hacer nada con ella: la
+ * API sigue exigiendo la cookie de acceso, que sí es `httpOnly`. Falsificarla
+ * sólo cambiaría el marco que se pinta.
+ */
+export const cookieDeSesion = (tipo: TipoDeUsuario) => `kustto_sesion_${tipo}`;
+
 /** Lo que dice el JWT de a quién va dirigido. Ver `jwt.service.ts`. */
 export const audienciaDe = (tipo: TipoDeUsuario) => `kustto:${tipo}`;

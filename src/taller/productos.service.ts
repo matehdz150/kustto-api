@@ -61,6 +61,7 @@ export class ProductosTallerService {
 	 */
 	async crear(tallerId: string, cuerpo: Cuerpo) {
 		const datos = this.validar(cuerpo);
+		await this.exigirTipo(datos.producto.tipoId);
 		const estado: Estado = cuerpo.enviar === true ? "en_revision" : "borrador";
 
 		const id = await this.db.transaction(async (tx) => {
@@ -91,6 +92,7 @@ export class ProductosTallerService {
 	async actualizar(tallerId: string, id: string, cuerpo: Cuerpo) {
 		const previo = await this.suyoOFalla(tallerId, id);
 		const datos = this.validar(cuerpo, previo);
+		await this.exigirTipo(datos.producto.tipoId);
 
 		const estado: Estado =
 			previo.estado === "activo" || cuerpo.enviar === true
@@ -231,6 +233,25 @@ export class ProductosTallerService {
 	 * 404 y no 403 a propósito: un 403 le confirmaría a un taller que cierto id
 	 * existe y es de otro.
 	 */
+	/**
+	 * Que el tipo exista ANTES de escribir. Sin esto, un id inventado revienta
+	 * en la llave foránea con un 500 que no dice qué campo era; así es un 400
+	 * con nombre. `undefined` es "no se tocó" y `null` es "quitarlo": los dos
+	 * pasan.
+	 */
+	private async exigirTipo(tipoId: string | null | undefined) {
+		if (!tipoId) return;
+
+		const [fila] = await this.db
+			.select({ id: e.tiposDeProducto.id })
+			.from(e.tiposDeProducto)
+			.where(eq(e.tiposDeProducto.id, tipoId))
+			.limit(1)
+			.catch(() => []);
+
+		if (!fila) throw new BadRequestException("Ese tipo de producto no existe");
+	}
+
 	private async suyoOFalla(tallerId: string, id: string) {
 		const [fila] = await this.db
 			.select()
@@ -259,6 +280,8 @@ export class ProductosTallerService {
 		const lados = Array.isArray(cuerpo.printSides) ? cuerpo.printSides : [];
 		validarTecnicas(lados);
 		validarRecargos(lados);
+		validarImagenes(cuerpo.images);
+		validarPrecioAntes(cuerpo.pricing);
 
 		const fotos =
 			cuerpo.fotosReales === undefined
@@ -280,6 +303,9 @@ export class ProductosTallerService {
 					: {}),
 				...(cuerpo.templateId !== undefined
 					? { plantillaId: String(cuerpo.templateId).trim() || null }
+					: {}),
+				...(cuerpo.typeId !== undefined
+					? { tipoId: cuerpo.typeId ? String(cuerpo.typeId).trim() : null }
 					: {}),
 				...(cuerpo.isCustomizable !== undefined
 					? { personalizable: cuerpo.isCustomizable !== false }
@@ -356,6 +382,9 @@ export class ProductosTallerService {
 				await tx.insert(e.productoImagenes).values({
 					productoId,
 					url: String(img.url),
+					/* Sin `kind` es una `foto`, que es lo que mandaba el asistente
+					   antes de que hubiera tipos. */
+					tipo: (img.kind as (typeof TIPOS_DE_IMAGEN)[number]) ?? "foto",
 					orden: img.order ?? orden,
 				});
 			}
@@ -437,6 +466,17 @@ export class ProductosTallerService {
 					h.pricing.perSidePrice === null
 						? null
 						: Number(h.pricing.perSidePrice).toFixed(2),
+				/* `null` borra el precio anterior; si no viene, no se toca el que
+				   había: el asistente manda `pricing` entero pero un cliente viejo
+				   no sabe de este campo y lo borraría sin querer. */
+				...(h.pricing.compareAtPrice === undefined
+					? {}
+					: {
+							precioAntes:
+								h.pricing.compareAtPrice === null
+									? null
+									: Number(h.pricing.compareAtPrice).toFixed(2),
+						}),
 			};
 
 			await tx
@@ -618,9 +658,10 @@ export class ProductosTallerService {
 				categoryIds: cats
 					.filter((c) => c.productoId === p.id)
 					.map((c) => c.categoriaId),
+				typeId: p.tipoId,
 				images: imagenes
 					.filter((i) => i.productoId === p.id)
-					.map((i) => ({ url: i.url, order: i.orden })),
+					.map((i) => ({ url: i.url, order: i.orden, kind: i.tipo })),
 				colors: colores
 					.filter((c) => c.productoId === p.id)
 					.map((c) => ({ name: c.nombre, hex: c.hex })),
@@ -652,6 +693,9 @@ export class ProductosTallerService {
 							...(precio.precioPorLado
 								? { perSidePrice: Number(precio.precioPorLado) }
 								: {}),
+							...(precio.precioAntes
+								? { compareAtPrice: Number(precio.precioAntes) }
+								: {}),
 						}
 					: null,
 				production: prod?.dias ? { meta: { diasProduccion: prod.dias } } : null,
@@ -673,6 +717,36 @@ export class ProductosTallerService {
 				updatedAt: p.actualizadoEn.toISOString(),
 			};
 		});
+	}
+}
+
+/** Lo que una foto de producto puede enseñar. Ver `tipoImagenProducto`. */
+const TIPOS_DE_IMAGEN = ["foto", "recorte", "detalle", "ambiente"] as const;
+
+function validarImagenes(imagenes: unknown) {
+	if (!Array.isArray(imagenes)) return;
+
+	for (const img of imagenes) {
+		const kind = (img as Cuerpo | null)?.kind;
+		if (kind === undefined || kind === null) continue;
+		if (!TIPOS_DE_IMAGEN.includes(kind as (typeof TIPOS_DE_IMAGEN)[number])) {
+			throw new BadRequestException(
+				`El tipo de imagen tiene que ser ${TIPOS_DE_IMAGEN.join(", ")}`,
+			);
+		}
+	}
+}
+
+/**
+ * El precio anterior, si viene, tiene que ser un número sin signo. Que sea
+ * mayor que el base NO se exige aquí: el catálogo lo omite si no lo es, y
+ * rechazarlo al guardar obligaría a ordenar los dos campos al teclear.
+ */
+function validarPrecioAntes(pricing: unknown) {
+	const valor = (pricing as Cuerpo | undefined)?.compareAtPrice;
+	if (valor === undefined || valor === null) return;
+	if (!Number.isFinite(Number(valor)) || Number(valor) < 0) {
+		throw new BadRequestException("El precio anterior no es válido");
 	}
 }
 

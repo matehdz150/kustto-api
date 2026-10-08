@@ -19,6 +19,7 @@ import type { Identidad } from "../auth/identidad";
 import { PedidosService } from "./pedidos.service";
 import { PedidosCompradorService } from "./pedidos-comprador.service";
 import { PedidosTallerService } from "./pedidos-taller.service";
+import { RastreoService } from "./rastreo.service";
 
 /** La identidad que el guard ya dejó en la petición. */
 function quien(peticion: PeticionConIdentidad): Identidad {
@@ -33,11 +34,23 @@ function quien(peticion: PeticionConIdentidad): Identidad {
  */
 @Controller("publico/pedidos")
 export class PedidosPublicoController {
-	constructor(private readonly pedidos: PedidosService) {}
+	constructor(
+		private readonly pedidos: PedidosService,
+		private readonly rastreo: RastreoService,
+	) {}
 
 	@Post()
 	crear(@Body() cuerpo: Record<string, unknown>) {
 		return this.pedidos.crear(cuerpo);
+	}
+
+	/** "Rastrea tu pedido" con número y correo. Ver `RastreoService`. */
+	@Post("rastrear")
+	rastrear(
+		@Body() cuerpo: Record<string, unknown>,
+		@Req() peticion: { ip?: string },
+	) {
+		return this.rastreo.rastrear(cuerpo, peticion.ip ?? null);
 	}
 
 	@Get(":id")

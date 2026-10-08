@@ -35,6 +35,23 @@ export const estadoProducto = pgEnum("estado_producto", [
 ]);
 
 /**
+ * Qué enseña una foto de producto.
+ *
+ * `foto` es lo que ya había: la imagen sin más, la que sube el taller hoy.
+ * `recorte` es el producto SIN FONDO (PNG transparente) que va sobre el cuadro
+ * de color de las tarjetas de la tienda; la sube el taller, no se genera: un
+ * recorte automático de una prenda blanca sobre blanco se come los bordes.
+ * `detalle` y `ambiente` llenan la galería de la ficha (un acercamiento, el
+ * producto puesto).
+ */
+export const tipoImagenProducto = pgEnum("tipo_imagen_producto", [
+	"foto",
+	"recorte",
+	"detalle",
+	"ambiente",
+]);
+
+/**
  * Por dónde pasa un pedido.
  *
  * Son los estados que el panel del taller ya sabe pintar. `pagado` no está

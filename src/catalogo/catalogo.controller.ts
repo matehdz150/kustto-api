@@ -50,6 +50,11 @@ export class CatalogoController {
 		return this.catalogo.categorias();
 	}
 
+	@Get("tipos")
+	tipos() {
+		return this.catalogo.tipos();
+	}
+
 	@Post("solicitudes-proveedor")
 	async solicitarProveedor(
 		@Body() cuerpo: Record<string, unknown>,

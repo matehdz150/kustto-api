@@ -78,6 +78,34 @@
       "when": 1790134572210,
       "tag": "0010_banner_de_categoria",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1790628338420,
+      "tag": "0011_etapas_de_bordado",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1791418243288,
+      "tag": "0012_tipos_y_color_de_tienda",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1791418275103,
+      "tag": "0013_semilla_categorias_y_tipos",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1791422118443,
+      "tag": "0014_convertir_categorias_viejas_en_tipos",
+      "breakpoints": true
     }
   ]
 }

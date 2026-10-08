@@ -4,6 +4,7 @@ import type { Emitidos } from "./sesiones.service";
 import {
 	cookieDeAcceso,
 	cookieDeRenovacion,
+	cookieDeSesion,
 	DURACIONES,
 	type TipoDeUsuario,
 } from "./tipos";
@@ -53,6 +54,15 @@ export function ponerCookies(
 		path: rutaDeRenovacion(tipo),
 		expires: emitidos.renovacionExpiraEn,
 	});
+
+	/* Ver `cookieDeSesion`: SIN `httpOnly`, y vence junto con la renovación. */
+	res.cookie(cookieDeSesion(tipo), "1", {
+		...base(env),
+		httpOnly: false,
+		sameSite: "lax",
+		path: "/",
+		expires: emitidos.renovacionExpiraEn,
+	});
 }
 
 /**
@@ -73,5 +83,11 @@ export function borrarCookies(
 		...base(env),
 		sameSite: "strict",
 		path: rutaDeRenovacion(tipo),
+	});
+	res.clearCookie(cookieDeSesion(tipo), {
+		...base(env),
+		httpOnly: false,
+		sameSite: "lax",
+		path: "/",
 	});
 }
