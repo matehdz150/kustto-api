@@ -7,3 +7,6 @@ dist/
 .DS_Store
 dist-scripts/
 __pycache__/
+
+# Sólo local: enciende el bordado automático en el api de desarrollo.
+docker-compose.override.yml
