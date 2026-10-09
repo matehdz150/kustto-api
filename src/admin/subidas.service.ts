@@ -15,7 +15,7 @@ const TIPOS = new Map([
  * podría pedir `carpeta: "mockups/tshirt"` y sobrescribir el mockup de una
  * plantilla en uso.
  */
-const CARPETAS = new Set(["categorias", "productos", "banners"]);
+const CARPETAS = new Set(["categorias", "productos", "banners", "modelos3d"]);
 
 /**
  * El tope de una subida del backoffice. Los mockups de plantilla son grandes;
@@ -31,18 +31,27 @@ const MAXIMO = 25 * 1024 * 1024;
  * archivo grande —la firma deja de valer— y declarar el máximo a ciegas, como
  * se hacía antes, hacía fallar toda subida que no pesara justo 25 MB.
  */
-function tamano(v: unknown) {
+function tamano(v: unknown, maximo = MAXIMO) {
 	const n = Number(v);
 	if (!Number.isInteger(n) || n <= 0) {
 		throw new BadRequestException("Falta el tamaño del archivo");
 	}
-	if (n > MAXIMO) {
+	if (n > maximo) {
 		throw new BadRequestException(
-			`El archivo pesa demasiado. El máximo son ${Math.round(MAXIMO / 1024 / 1024)} MB.`,
+			`El archivo pesa demasiado. El máximo son ${Math.round(maximo / 1024 / 1024)} MB.`,
 		);
 	}
 	return n;
 }
+
+/**
+ * El tope de un modelo 3D. Los seis de hoy pesan menos de 1 MB; esto deja
+ * espacio para uno con texturas sin abrir la puerta a cualquier cosa.
+ */
+const MAXIMO_MODELO = 30 * 1024 * 1024;
+
+/** El tipo con el que se guarda un `.glb`: lo fija el servidor, no el navegador. */
+const TIPO_GLB = "model/gltf-binary";
 
 /** Todo lo que llega del navegador y acaba en una llave de S3 pasa por aquí. */
 const limpio = (s: unknown) =>
@@ -104,6 +113,23 @@ export class SubidasService {
 
 		const llave = `medios/${carpeta}/${randomBytes(8).toString("hex")}.${ext}`;
 		return this.firmar(llave, contentType, tamano(cuerpo.bytes));
+	}
+
+	/**
+	 * Permiso para subir un modelo 3D (`.glb`) de la galería.
+	 *
+	 * EL TIPO LO PONE EL SERVIDOR: el navegador ni siquiera conoce `.glb` (el
+	 * `File.type` llega vacío en la mayoría de los sistemas), y dejar que lo
+	 * declare él sería dejar que guarde cualquier cosa con cualquier tipo. Se
+	 * firma `model/gltf-binary` y el navegador tiene que mandar ese mismo.
+	 *
+	 * Vive bajo `medios/modelos3d/`, que ya se sirve desde el mismo origen
+	 * (`/medios/...`), con nombre único e inmutable.
+	 */
+	async urlParaModelo(cuerpo: Record<string, unknown>) {
+		const id = limpio(cuerpo.id) || "modelo";
+		const llave = `medios/modelos3d/${id}-${randomBytes(6).toString("hex")}.glb`;
+		return this.firmar(llave, TIPO_GLB, tamano(cuerpo.bytes, MAXIMO_MODELO));
 	}
 
 	private async firmar(llave: string, contentType: string, bytes: number) {

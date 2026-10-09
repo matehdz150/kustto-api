@@ -82,10 +82,11 @@ export class PlantillasService {
 
 	async crear(cuerpo: Record<string, unknown>) {
 		const dto = validar(cuerpo);
+		const modelo3dId = await this.modeloExistente(cuerpo.modelo3dId);
 
 		const [fila] = await this.db
 			.insert(e.plantillasDePrenda)
-			.values({ id: dto.id, nombre: dto.name, datos: dto.data })
+			.values({ id: dto.id, nombre: dto.name, datos: dto.data, modelo3dId })
 			/* Sin esto, crear dos veces el mismo id sobrescribiría la plantilla
 			   sin avisar — y una plantilla en uso pisada deja de cuadrar con los
 			   productos que ya la referencian. */
@@ -110,6 +111,10 @@ export class PlantillasService {
 			cambios.nombre = nombre;
 		}
 
+		if (cuerpo.modelo3dId !== undefined) {
+			cambios.modelo3dId = await this.modeloExistente(cuerpo.modelo3dId);
+		}
+
 		if (cuerpo.data !== undefined) {
 			/* Se valida ENTERA aunque sea un PATCH: `data` se manda completa desde
 			   el asistente, y aceptar una a medias dejaría una plantilla con un
@@ -128,6 +133,24 @@ export class PlantillasService {
 		if (!fila) throw new NotFoundException("Plantilla no encontrada");
 
 		return { ok: true };
+	}
+
+	/**
+	 * El id de un modelo que existe, o `null` para "sin modelo". Sin esto, un id
+	 * inventado saltaría como un error de clave foránea que no dice nada.
+	 */
+	private async modeloExistente(valor: unknown): Promise<string | null> {
+		const id = typeof valor === "string" ? valor.trim() : "";
+		if (!id) return null;
+
+		const [modelo] = await this.db
+			.select({ id: e.modelos3d.id })
+			.from(e.modelos3d)
+			.where(eq(e.modelos3d.id, id))
+			.limit(1);
+
+		if (!modelo) throw new BadRequestException(`No existe el modelo "${id}"`);
+		return modelo.id;
 	}
 
 	/**
@@ -165,6 +188,7 @@ function aSalida(fila: typeof e.plantillasDePrenda.$inferSelect) {
 		id: fila.id,
 		name: fila.nombre,
 		data: fila.datos,
+		modelo3dId: fila.modelo3dId,
 		createdAt: fila.creadoEn.toISOString(),
 		updatedAt: fila.actualizadoEn.toISOString(),
 	};
@@ -220,5 +244,11 @@ function validar(cuerpo: Record<string, unknown>) {
 		}
 	}
 
-	return { id, name, data: { ...data, forma } };
+	/* El modelo vive en su columna: una copia dentro de `data` (la ficha la
+	   añade al leer) quedaría vieja al cambiarlo. */
+	const { modelo3d: _fuera, ...resto } = data as DatosPlantilla & {
+		modelo3d?: unknown;
+	};
+
+	return { id, name, data: { ...resto, forma } };
 }

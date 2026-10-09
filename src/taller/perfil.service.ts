@@ -99,12 +99,26 @@ export class TallerService {
 
 	/** Las plantillas de prenda, para el asistente de alta. */
 	async plantillas() {
-		const filas = await this.db
-			.select()
-			.from(e.plantillasDePrenda)
-			.orderBy(asc(e.plantillasDePrenda.nombre));
+		const [filas, modelos] = await Promise.all([
+			this.db
+				.select()
+				.from(e.plantillasDePrenda)
+				.orderBy(asc(e.plantillasDePrenda.nombre)),
+			this.db.select().from(e.modelos3d),
+		]);
+		const porId = new Map(modelos.map((m) => [m.id, m]));
 
-		return filas.map((p) => ({ id: p.id, name: p.nombre, data: p.datos }));
+		return filas.map((p) => {
+			const modelo = p.modelo3dId ? porId.get(p.modelo3dId) : undefined;
+			return {
+				id: p.id,
+				name: p.nombre,
+				data: p.datos,
+				/* Para que el asistente diga "incluye vista 3D". El proveedor NO lo
+				   elige: viene con la plantilla. */
+				modelo3d: modelo ? { id: modelo.id, name: modelo.nombre } : null,
+			};
+		});
 	}
 
 	async categorias() {

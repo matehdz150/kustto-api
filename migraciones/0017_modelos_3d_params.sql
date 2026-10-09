@@ -1,0 +1,1 @@
+ALTER TABLE "modelos_3d" ADD COLUMN "params" jsonb DEFAULT '{}'::jsonb NOT NULL;

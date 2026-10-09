@@ -17,6 +17,7 @@ import type { Response } from "express";
 import { AlmacenService } from "../almacen/almacen.service";
 import { GuardAdmin } from "../auth/auth.guard";
 import { CategoriasService } from "./categorias.service";
+import { Modelos3dService } from "./modelos3d.service";
 import { PlantillasService } from "./plantillas.service";
 import { RevisionService } from "./revision.service";
 import { SubidasService } from "./subidas.service";
@@ -40,6 +41,7 @@ import { TalleresService } from "./talleres.service";
 export class AdminController {
 	constructor(
 		private readonly plantillas: PlantillasService,
+		private readonly modelos3d: Modelos3dService,
 		private readonly categorias: CategoriasService,
 		private readonly revision: RevisionService,
 		private readonly talleres: TalleresService,
@@ -76,6 +78,33 @@ export class AdminController {
 	@Delete("templates/:id")
 	borrarPlantilla(@Param("id") id: string) {
 		return this.plantillas.borrar(id);
+	}
+
+	/* ─── Modelos 3D ──────────────────────────────────────────────────────
+	   La galería: una plantilla tiene a lo más un modelo (`modelo3dId` en la
+	   plantilla) y el proveedor no lo elige. */
+
+	@Get("modelos-3d")
+	listarModelos3d() {
+		return this.modelos3d.listar();
+	}
+
+	@Post("modelos-3d")
+	crearModelo3d(@Body() c: Record<string, unknown>) {
+		return this.modelos3d.crear(c);
+	}
+
+	@Patch("modelos-3d/:id")
+	actualizarModelo3d(
+		@Param("id") id: string,
+		@Body() c: Record<string, unknown>,
+	) {
+		return this.modelos3d.actualizar(id, c);
+	}
+
+	@Delete("modelos-3d/:id")
+	borrarModelo3d(@Param("id") id: string) {
+		return this.modelos3d.borrar(id);
 	}
 
 	/* ─── Categorías ──────────────────────────────────────────────────────── */
@@ -141,6 +170,11 @@ export class AdminController {
 	@Post("uploads/mockup-url")
 	firmarMockup(@Body() c: Record<string, unknown>) {
 		return this.subidas.urlParaMockup(c);
+	}
+
+	@Post("uploads/modelo-url")
+	urlModelo(@Body() c: Record<string, unknown>) {
+		return this.subidas.urlParaModelo(c);
 	}
 
 	@Post("uploads/imagen-url")
