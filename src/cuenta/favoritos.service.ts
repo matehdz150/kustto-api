@@ -1,5 +1,5 @@
 import { BadRequestException, Inject, Injectable } from "@nestjs/common";
-import { and, eq, inArray, notInArray } from "drizzle-orm";
+import { and, asc, eq, inArray, notInArray } from "drizzle-orm";
 import type { Identidad } from "../auth/identidad";
 import { DB, type Db } from "../db/db.module";
 import * as e from "../db/esquema";
@@ -20,7 +20,9 @@ export class FavoritosService {
 		const filas = await this.db
 			.select({ productoId: e.favoritos.productoId })
 			.from(e.favoritos)
-			.where(eq(e.favoritos.compradorId, quien.sub));
+			.where(eq(e.favoritos.compradorId, quien.sub))
+			// El orden en que se guardaron: la pantalla enseña el último primero.
+			.orderBy(asc(e.favoritos.creadoEn));
 
 		return { ids: filas.map((f) => f.productoId) };
 	}
