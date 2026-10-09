@@ -1,6 +1,7 @@
 import { Inject, Injectable, NotFoundException } from "@nestjs/common";
 import { and, asc, desc, eq, gte, inArray, ne, sql } from "drizzle-orm";
 import { aSalida } from "../admin/categorias.service";
+import { modeloDeFicha } from "../admin/modelos3d.service";
 import { DB, type Db } from "../db/db.module";
 import * as e from "../db/esquema";
 
@@ -140,6 +141,17 @@ export class CatalogoService {
 				.orderBy(asc(e.productoFotosReales.orden)),
 		]);
 
+		/* El modelo 3D de la plantilla, si tiene. Va aparte del `Promise.all`
+		   porque depende de lo que devuelva la plantilla. */
+		const modelo3d = plantilla?.modelo3dId
+			? await this.db
+					.select()
+					.from(e.modelos3d)
+					.where(eq(e.modelos3d.id, plantilla.modelo3dId))
+					.limit(1)
+					.then((f) => (f[0] ? modeloDeFicha(f[0]) : null))
+			: null;
+
 		return {
 			...ficha,
 			pricing: {
@@ -172,7 +184,12 @@ export class CatalogoService {
 				? {
 						id: plantilla.id,
 						name: plantilla.nombre,
-						data: plantilla.datos,
+						/* El modelo 3D de la plantilla va DENTRO de `data`, que es lo que
+						   el editor y la ficha ya leen por todas partes. */
+						data: {
+							...(plantilla.datos as object),
+							modelo3d: modelo3d ?? null,
+						},
 						createdAt: plantilla.creadoEn.toISOString(),
 						updatedAt: plantilla.actualizadoEn.toISOString(),
 					}

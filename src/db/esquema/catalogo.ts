@@ -65,6 +65,44 @@ export const tiposDeProducto = pgTable(
 );
 
 /**
+ * Un modelo 3D de la galería del backoffice.
+ *
+ * NO ES SÓLO UN ARCHIVO. Cada modelo se dibuja y se estampa con código propio
+ * (el mapeo del dibujo plano al modelo: UV, medidas, cámara), y ese código se
+ * elige con `mapeo`. Por eso la galería es un catálogo y no un cajón de
+ * `.glb`: otro corte de playera con el mismo mapeo se da de alta sin tocar
+ * código; un tipo de objeto nuevo necesita su mapeo primero.
+ *
+ * UNA PLANTILLA TIENE A LO MÁS UN MODELO (`plantillas_de_prenda.modelo3d_id`) y
+ * el proveedor no lo elige: elige la plantilla y el modelo viene con ella. Las
+ * áreas imprimibles de la plantilla dependen del modelo, así que dejar que se
+ * combinen a gusto rompería la correspondencia.
+ *
+ * EL ID ES `text` y legible (`playera`, `sudadera`…): es el que se ve en la
+ * galería y en los registros, y los seis de origen lo traen por nombre.
+ */
+export const modelos3d = pgTable("modelos_3d", {
+	id: text().primaryKey(),
+	nombre: text().notNull(),
+	/** Qué código de mapeo lo dibuja: playera, sudadera, gorra, taza, termo o pluma. */
+	mapeo: text().notNull(),
+	/**
+	 * Dónde está el `.glb`. Vacío en los que no lo tienen (la taza se dibuja
+	 * con geometría propia).
+	 */
+	glbUrl: text("glb_url"),
+	miniaturaUrl: text("miniatura_url"),
+	/**
+	 * Lo que el mapeo necesita saber del modelo y que NO está en el `.glb`. Hoy,
+	 * sólo para `generico`: las zonas de impresión que el admin colocó a mano
+	 * (`{ zonas: { front: { posicion, rotacion, escala }, back: … } }`). Es un
+	 * documento que el editor lee entero y nadie consulta por dentro.
+	 */
+	params: jsonb().notNull().default({}),
+	...marcas,
+});
+
+/**
  * La plantilla de prenda: los mockups y las áreas imprimibles de una forma.
  *
  * `lados` y `mockups` se quedan en JSONB a propósito. Es geometría que el
@@ -97,6 +135,13 @@ export const plantillasDePrenda = pgTable("plantillas_de_prenda", {
 	 * obligaría a adivinar dónde corta cada plantilla ya guardada.
 	 */
 	datos: jsonb().notNull().default({}),
+	/**
+	 * El modelo 3D de esta plantilla, o `null` si no tiene (una mochila). `set
+	 * null` al borrar el modelo: la plantilla sigue sirviendo con fotos.
+	 */
+	modelo3dId: text("modelo3d_id").references(() => modelos3d.id, {
+		onDelete: "set null",
+	}),
 	...marcas,
 });
 
